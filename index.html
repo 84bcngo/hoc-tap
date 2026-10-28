@@ -1,0 +1,687 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Góc học tập 6A14</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ccircle cx='32' cy='36' r='24' fill='%235B43D6'/%3E%3Ccircle cx='23' cy='32' r='9' fill='%23fff'/%3E%3Ccircle cx='41' cy='32' r='9' fill='%23fff'/%3E%3Ccircle cx='24' cy='33' r='4' fill='%231F2A4D'/%3E%3Ccircle cx='40' cy='33' r='4' fill='%231F2A4D'/%3E%3Cpath d='M28 42 L32 47 L36 42Z' fill='%23FFD84D'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&family=Be+Vietnam+Pro:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  color-scheme: light;
+  --paper:#F6F8FE; --grid:#DFE6F7; --card:#FFFFFF; --ink:#1F2A4D; --muted:#5E6A8A; --line:#D9E0F0;
+  --violet:#5B43D6; --violet-ink:#FFFFFF; --violet-soft:#ECE8FF;
+  --hi:#FFD84D; --hi-soft:#FFF6CC;
+  --ok:#1F8A57; --ok-soft:#DFF5E9; --mid:#B97100; --mid-soft:#FFF0D2; --no:#D2443B; --no-soft:#FDE6E4;
+  --f-disp:"Baloo 2", "Be Vietnam Pro", system-ui, sans-serif;
+  --f-body:"Be Vietnam Pro", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --r-lg:20px; --r-md:14px; --r-sm:10px;
+  --s-toan:#DCE8FB; --s-toan-ink:#1C4A96; --s-van:#FBE0E6; --s-van-ink:#942843; --s-anh:#DCF1E2; --s-anh-ink:#1C6636;
+  --s-khtn:#D6EFEF; --s-khtn-ink:#0F6265; --s-lsdl:#FBEACB; --s-lsdl-ink:#7E5205; --s-khac:#ECEBFA; --s-khac-ink:#3D3A7A;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{
+  background-color:var(--paper);
+  background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);
+  background-size:22px 22px;
+  color:var(--ink); font:15px/1.55 var(--f-body);
+}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:3px solid var(--violet);outline-offset:2px}
+h1,h2,h3{font-family:var(--f-disp);line-height:1.15;margin:0}
+.muted{color:var(--muted)}
+.small{font-size:13px}
+
+/* ---- khung trang ---- */
+.shell{display:grid;grid-template-columns:232px 1fr;min-height:100vh}
+.side{background:var(--card);border-right:2px solid var(--line);padding:20px 14px;position:sticky;top:0;height:100vh;display:flex;flex-direction:column;gap:6px}
+.brand{display:flex;align-items:center;gap:10px;padding:0 6px 14px}
+.brand b{font:800 21px/1.05 var(--f-disp);color:var(--violet)}
+.nav button{display:flex;align-items:center;gap:12px;width:100%;border:0;background:none;padding:10px 12px;border-radius:12px;font-weight:600;color:var(--muted);text-align:left}
+.nav button .ic{font-size:19px;width:24px;text-align:center}
+.nav button[aria-current="page"]{background:var(--violet-soft);color:var(--violet)}
+.nav button:hover{color:var(--ink)}
+.side .owlbox{margin-top:auto;padding:12px;border-radius:var(--r-md);background:var(--hi-soft);font:600 15px/1.35 var(--f-disp);color:#6B5200}
+.main{padding:22px 28px 90px;max-width:1240px;width:100%}
+
+/* ---- dau trang ---- */
+.top{display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+.top h1{font-size:34px;font-weight:800}
+.top .sub{color:var(--muted);margin-top:2px}
+.top .grow{flex:1;min-width:220px}
+.daytoggle{display:flex;background:var(--card);border:2px solid var(--line);border-radius:99px;padding:3px}
+.daytoggle button{border:0;background:none;border-radius:99px;padding:6px 14px;font-weight:600;color:var(--muted)}
+.daytoggle button[aria-pressed="true"]{background:var(--violet);color:var(--violet-ink)}
+.sync{font-size:12px;color:var(--muted);display:flex;align-items:center;gap:6px}
+.dot{width:9px;height:9px;border-radius:50%;background:var(--ok);display:inline-block}
+.dot.wait{background:var(--mid)} .dot.err{background:var(--no)}
+
+/* ---- the so lieu ---- */
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin:20px 0}
+.stat{background:var(--card);border:2px solid var(--line);border-radius:var(--r-lg);padding:14px 16px;display:flex;gap:12px;align-items:center}
+.stat .em{font-size:28px;line-height:1}
+.stat b{font:800 26px/1 var(--f-disp);display:block}
+.stat span{font-size:13px;color:var(--muted)}
+.bar{height:8px;background:var(--grid);border-radius:99px;overflow:hidden;margin-top:6px}
+.bar i{display:block;height:100%;background:var(--ok);border-radius:99px;transition:width .4s}
+
+/* ---- bo cuc 2 cot ---- */
+.cols{display:grid;grid-template-columns:minmax(0,1fr) 330px;gap:20px;align-items:start}
+.panel{background:var(--card);border:2px solid var(--line);border-radius:var(--r-lg);padding:18px 20px}
+.panel + .panel{margin-top:16px}
+.panel h2{font-size:22px;font-weight:700}
+.panel .ph{display:flex;align-items:baseline;gap:10px;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap}
+
+/* ---- dong thoi gian buoi chieu (diem nhan) ---- */
+.headline{background:var(--violet);color:var(--violet-ink);border-radius:var(--r-lg);padding:16px 20px;display:flex;gap:14px;align-items:center}
+.headline .t{font:700 20px/1.25 var(--f-disp)}
+.headline p{margin:4px 0 0;font-size:14px;opacity:.92}
+.timeline{position:relative;margin-top:18px;padding-left:72px}
+.timeline:before{content:"";position:absolute;left:58px;top:6px;bottom:6px;width:3px;background:var(--grid);border-radius:3px}
+.blk{position:relative;margin-bottom:16px}
+.blk .clock{position:absolute;left:-72px;top:12px;width:52px;text-align:right;font:700 15px/1 var(--f-disp);color:var(--muted)}
+.blk .clock small{display:block;font:500 11px var(--f-body);margin-top:3px}
+.blk .pin{position:absolute;left:-20px;top:13px;width:15px;height:15px;border-radius:50%;background:var(--card);border:3px solid var(--violet)}
+.blk.now .pin{background:var(--hi);border-color:#C9A000;box-shadow:0 0 0 6px rgba(255,216,77,.45)}
+.blk.done .pin{background:var(--ok);border-color:var(--ok)}
+.sj{border-radius:var(--r-md);border:2px solid var(--line);background:var(--card);overflow:hidden}
+.blk.now .sj{border-color:#E8C33A;box-shadow:0 0 0 4px var(--hi-soft)}
+.sjh{display:flex;align-items:center;gap:10px;padding:10px 14px;font:700 17px var(--f-disp)}
+.sjh .tag{margin-left:auto;font:600 12px var(--f-body);padding:3px 9px;border-radius:99px;background:rgba(255,255,255,.7)}
+.sjh .tag.red{background:var(--no);color:#fff}
+.task{display:flex;gap:12px;align-items:flex-start;padding:12px 14px;border-top:1px dashed var(--line)}
+.task .txt{flex:1;min-width:0}
+.task .src{display:inline-block;font-size:11px;font-weight:700;padding:1px 7px;border-radius:6px;background:var(--grid);color:var(--muted);margin-right:6px;vertical-align:1px}
+.task .debt{color:var(--no);font-weight:600;font-size:12px;margin-left:4px}
+.task.m-ok .txt .body{text-decoration:line-through;text-decoration-color:rgba(31,138,87,.6);color:var(--muted)}
+.task .when{font-size:12px;color:var(--muted);margin-top:3px}
+.hint{margin:0;padding:8px 14px 12px 14px;font-size:13px;color:var(--muted);border-top:1px dashed var(--line);background:#FBFCFF}
+.hint b{color:var(--ink)}
+.stamps{display:flex;gap:6px;flex:none}
+.stamp{width:42px;height:42px;border-radius:50%;border:2.5px solid var(--line);background:var(--card);font:800 20px/1 var(--f-disp);display:grid;place-items:center;color:var(--muted);transition:transform .12s}
+.stamp:hover{transform:scale(1.06)}
+.stamp.ok[aria-pressed="true"]{background:var(--ok);border-color:var(--ok);color:#fff;transform:rotate(-8deg)}
+.stamp.mid[aria-pressed="true"]{background:var(--mid);border-color:var(--mid);color:#fff;transform:rotate(6deg)}
+.stamp.no[aria-pressed="true"]{background:var(--no);border-color:var(--no);color:#fff;transform:rotate(-4deg)}
+.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:13px;color:var(--muted);margin-top:10px}
+.legend b{display:inline-flex;vertical-align:-5px}
+.tail{margin:6px 0 0;padding:0;list-style:none}
+.tail li{padding:8px 0;border-top:1px dashed var(--line);font-size:14px}
+.actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}
+
+/* ---- nut ---- */
+.btn{border:0;border-radius:12px;padding:10px 16px;font-weight:700;background:var(--violet);color:var(--violet-ink)}
+.btn.soft{background:var(--violet-soft);color:var(--violet)}
+.btn.line{background:var(--card);border:2px solid var(--line);color:var(--ink)}
+.btn.hi{background:var(--hi);color:#3D2F00}
+.btn:disabled{opacity:.5;cursor:default}
+
+/* ---- cot phai ---- */
+.periods{list-style:none;margin:0;padding:0}
+.periods li{display:flex;gap:10px;align-items:center;padding:7px 0;border-top:1px dashed var(--line)}
+.periods li:first-child{border-top:0}
+.periods .n{width:26px;height:26px;border-radius:8px;background:var(--grid);display:grid;place-items:center;font:700 13px var(--f-disp);color:var(--muted);flex:none}
+.chip{display:inline-block;padding:2px 10px;border-radius:99px;font-size:13px;font-weight:600}
+.exam{display:flex;align-items:center;gap:12px;padding:8px 0;border-top:1px dashed var(--line)}
+.exam:first-of-type{border-top:0}
+.exam .cd{width:54px;flex:none;text-align:center;border-radius:12px;padding:5px 0;background:var(--no-soft);color:var(--no);font:800 20px/1 var(--f-disp)}
+.exam .cd small{display:block;font:600 10px var(--f-body);margin-top:2px}
+
+/* ---- kien thuc ---- */
+.kgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:16px}
+.kcard{background:var(--card);border:2px solid var(--line);border-radius:var(--r-lg);overflow:hidden;display:flex;flex-direction:column}
+.kcard header{padding:12px 16px}
+.kcard header h3{font-size:18px;font-weight:700}
+.kcard ul{list-style:none;margin:0;padding:6px 16px 10px}
+.kcard li{padding:7px 0 7px 26px;position:relative;border-top:1px dashed var(--line);font-size:14px}
+.kcard li:first-child{border-top:0}
+.kcard li:before{content:"–";position:absolute;left:6px;color:var(--muted)}
+.kcard li.star:before{content:"⭐";left:0;font-size:13px}
+.kcard li.star{font-weight:500}
+.kcard.quiz li.star .k{filter:blur(5px);cursor:pointer;user-select:none;transition:filter .2s}
+.kcard.quiz li.star.show .k{filter:none}
+.kcard .mis{margin:0 16px 12px;padding:10px 12px;border-radius:var(--r-sm);background:var(--no-soft);font-size:13px}
+.kcard .mis b{color:var(--no)}
+.kcard footer{margin-top:auto;padding:10px 16px 14px;display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+
+/* ---- form ---- */
+.form{display:grid;gap:12px}
+.frow{display:grid;grid-template-columns:150px 1fr 110px 1fr;gap:10px;align-items:center;padding:10px 0;border-top:1px dashed var(--line)}
+.frow:first-child{border-top:0}
+label.f{display:grid;gap:4px;font-size:13px;font-weight:600;color:var(--muted)}
+input[type=text],input[type=date],input[type=password],select,textarea{width:100%;border:2px solid var(--line);border-radius:10px;padding:8px 10px;background:var(--card)}
+textarea{min-height:70px;resize:vertical}
+.ok-note{color:var(--ok);font-weight:600;font-size:13px}
+
+/* ---- TKB tuan ---- */
+.tkb{width:100%;border-collapse:separate;border-spacing:6px}
+.tkb th{font:700 15px var(--f-disp);color:var(--muted);padding:4px}
+.tkb th.today{color:var(--violet)}
+.tkb td{background:var(--card);border:2px solid var(--line);border-radius:10px;padding:8px;font-size:13px;font-weight:600;vertical-align:top;height:52px}
+.tkb td.today{border-color:var(--violet)}
+.tkb td.empty{background:transparent;border-style:dashed}
+.tkb .pno{font:700 14px var(--f-disp);color:var(--muted);text-align:center;background:none;border:0}
+
+/* ---- thanh tich ---- */
+.badges{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:14px}
+.badge{background:var(--card);border:2px solid var(--line);border-radius:var(--r-lg);padding:16px;text-align:center}
+.badge .em{font-size:40px;line-height:1;display:block;filter:grayscale(1);opacity:.45}
+.badge.got{border-color:#E8C33A;background:linear-gradient(var(--hi-soft),var(--card))}
+.badge.got .em{filter:none;opacity:1;transform:rotate(-6deg)}
+.badge h3{font-size:17px;margin-top:8px}
+.badge p{margin:4px 0 0;font-size:12px;color:var(--muted)}
+.sjbars{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px}
+.sjbar{border-radius:var(--r-md);padding:12px 14px}
+.sjbar b{font:800 24px/1 var(--f-disp)}
+.sjbar .bar{background:rgba(255,255,255,.7)}
+.scores{width:100%;border-collapse:collapse;font-size:14px}
+.scores td{padding:8px 4px;border-top:1px dashed var(--line)}
+.scores td:first-child{width:90px;white-space:nowrap}
+.scores td.v{font:800 18px var(--f-disp);text-align:right}
+
+/* ---- nhat ky ---- */
+.log{list-style:none;margin:0;padding:0}
+.log li{display:flex;gap:12px;padding:9px 0;border-top:1px dashed var(--line);font-size:14px}
+.log li:first-child{border-top:0}
+.log time{font:700 14px var(--f-disp);color:var(--muted);width:46px;flex:none}
+.log .pend{font-size:11px;color:var(--mid);font-weight:700;margin-left:6px}
+
+/* ---- dang nhap ---- */
+.setup{max-width:520px;margin:8vh auto;background:var(--card);border:2px solid var(--line);border-radius:24px;padding:28px}
+.setup h1{font-size:30px;color:var(--violet)}
+.setup .form{margin-top:16px}
+.err{color:var(--no);font-weight:600;font-size:14px}
+
+.toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:var(--ink);color:#fff;padding:10px 18px;border-radius:99px;font-weight:600;font-size:14px;z-index:30;max-width:92vw}
+.empty-state{text-align:center;padding:26px 10px}
+.empty-state .owl{width:90px;height:90px;margin:0 auto 8px}
+.burst{position:fixed;inset:0;pointer-events:none;z-index:40;overflow:hidden}
+.burst i{position:absolute;top:-20px;width:10px;height:14px;border-radius:3px;animation:fall 1.6s ease-in forwards}
+@keyframes fall{to{transform:translateY(105vh) rotate(540deg)}}
+
+@media (max-width:1080px){ .cols{grid-template-columns:1fr} .stats{grid-template-columns:repeat(2,1fr)} }
+@media (max-width:760px){
+  .shell{grid-template-columns:1fr}
+  .side{position:fixed;bottom:0;top:auto;left:0;right:0;height:auto;flex-direction:row;padding:6px;border-right:0;border-top:2px solid var(--line);z-index:20}
+  .brand,.side .owlbox{display:none}
+  .nav{display:flex;width:100%;justify-content:space-around}
+  .nav button{flex-direction:column;gap:2px;font-size:11px;padding:6px 4px;width:auto;flex:1;text-align:center}
+  .main{padding:16px 16px 96px}
+  .top h1{font-size:27px}
+  .timeline{padding-left:0}
+  .timeline:before,.blk .pin{display:none}
+  .blk .clock{position:static;width:auto;text-align:left;margin-bottom:4px}
+  .blk .clock small{display:inline;margin-left:6px}
+  .frow{grid-template-columns:1fr 1fr}
+  .task{flex-wrap:wrap}
+  .task .txt{flex-basis:100%}
+  .stamps{margin-left:auto}
+  .stamp{width:44px;height:44px}
+  .tkb{font-size:12px} .tkb td{padding:5px;height:44px}
+}
+@media (prefers-reduced-motion:reduce){ *{transition:none!important;animation:none!important} }
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script>
+'use strict';
+/* =====================================================================
+   GOC HOC TAP 6A14 – app hoc sinh (giai doan 2, 28/10/2026)
+   Doc ke hoach ba giao trong kho GitHub rieng tu <owner>/hoc-tap-6a14:
+     ke-hoach/YYYY-MM-DD.json  (app ba tao)    chung/chung.json (TKB, lich KT, diem)
+   Ghi thao tac cua con: con-ghi/YYYY-MM-DD.json  {events:[...]}
+   Ma truy cap chi luu tren may nay (localStorage).
+   ===================================================================== */
+const CFG_KEY = 'goc-hoc-tap-cfg', QUEUE_KEY = 'goc-hoc-tap-queue', CACHE_KEY = 'goc-hoc-tap-cache';
+const ls = {
+  get(k, d){ try{ const v = localStorage.getItem(k); return v == null ? d : JSON.parse(v); }catch(e){ return d; } },
+  set(k, v){ try{ localStorage.setItem(k, JSON.stringify(v)); }catch(e){} }
+};
+const pad = n => String(n).padStart(2, '0');
+const iso = d => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+const pd = s => { const [y,m,d] = s.split('-').map(Number); return new Date(y, m-1, d); };
+const addDays = (s, n) => { const d = pd(s); d.setDate(d.getDate() + n); return iso(d); };
+const dow = s => pd(s).getDay();
+const DAYS = ['Chủ nhật','Thứ Hai','Thứ Ba','Thứ Tư','Thứ Năm','Thứ Sáu','Thứ Bảy'];
+const SHORT = ['CN','T2','T3','T4','T5','T6','T7'];
+const fmt = s => s ? `${SHORT[dow(s)]} ${pd(s).getDate()}/${pd(s).getMonth()+1}` : '';
+const hm = at => { const d = new Date(at); return isNaN(d) ? '' : `${d.getHours()}:${pad(d.getMinutes())}`; };
+const today = () => iso(new Date());
+const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const SUBJ_COLOR = {'Toán':'toan','Văn':'van','Ngữ Văn':'van','Tiếng Anh':'anh','KHTN':'khtn','LS&ĐL':'lsdl','Lịch sử':'lsdl','Địa lí':'lsdl'};
+const sjStyle = sj => { const k = SUBJ_COLOR[sj] || (String(sj).startsWith('Toán') ? 'toan' : 'khac'); return `background:var(--s-${k});color:var(--s-${k}-ink)`; };
+const SUBJ_ICON = {'Toán':'📐','Văn':'📕','Tiếng Anh':'🔤','KHTN':'🔬','LS&ĐL':'🗺️','Tin học':'💻','GDCD':'🤝','Công nghệ':'🛠️','GDĐP':'🏙️','Âm nhạc':'🎵','Mĩ thuật':'🎨','HĐTN':'🧭','Thể dục':'🏃'};
+const ic = sj => SUBJ_ICON[sj] || '📘';
+const SKIP_PROG = new Set(['SH','Thể dục','GDĐP']);
+const MARKS = {ok: {s: '✓', n: 'Xong đủ', c: 'ok'}, unsure: {s: '◯', n: 'Xong, chưa chắc', c: 'mid'}, no: {s: '✗', n: 'Chưa làm được', c: 'no'}};
+const MARK_SVG = {ok: '<svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+  unsure: '<svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><circle cx="12" cy="12" r="7.5" fill="none" stroke="currentColor" stroke-width="3"/></svg>',
+  no: '<svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M6.5 6.5l11 11M17.5 6.5l-11 11" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round"/></svg>'};
+const OWL = (sz = 64) => `<svg class="owl" width="${sz}" height="${sz}" viewBox="0 0 64 64" aria-hidden="true"><ellipse cx="32" cy="38" rx="23" ry="22" fill="#5B43D6"/><path d="M12 22 L20 30 L14 32Z M52 22 L44 30 L50 32Z" fill="#5B43D6"/><ellipse cx="32" cy="45" rx="13" ry="11" fill="#ECE8FF"/><circle cx="23" cy="32" r="9" fill="#fff"/><circle cx="41" cy="32" r="9" fill="#fff"/><circle cx="24.5" cy="33" r="4.2" fill="#1F2A4D"/><circle cx="39.5" cy="33" r="4.2" fill="#1F2A4D"/><circle cx="26" cy="31.5" r="1.4" fill="#fff"/><circle cx="41" cy="31.5" r="1.4" fill="#fff"/><path d="M28.5 40 L32 45 L35.5 40Z" fill="#FFD84D"/><rect x="17" y="10" width="30" height="5" rx="1.5" fill="#1F2A4D"/><path d="M32 5 L50 12 L32 17 L14 12Z" fill="#1F2A4D"/><path d="M46 13 L47 22" stroke="#FFD84D" stroke-width="2"/></svg>`;
+
+/* ============ TRANG THAI ============ */
+const S = {
+  cfg: ls.get(CFG_KEY, {}),
+  tab: ['home','know','add','tkb','award','log'].includes(location.hash.slice(1)) ? location.hash.slice(1) : 'home',
+  view: 'today',          // today | tomorrow
+  plans: {},              // day -> plan
+  common: null,
+  remote: {},             // file day -> {sha, events}
+  queue: ls.get(QUEUE_KEY, []),   // su kien chua gui
+  loaded: false, loadErr: '', syncState: 'ok', lastSync: '',
+  quiz: {}, reveal: {}, toast: '', prog: {}, nt: {subject: '', content: '', source: 'V', due: ''}, note: '', setupErr: '', busy: false
+};
+// Ban tam de mo app khi mat mang
+(() => { const c = ls.get(CACHE_KEY, null); if (c){ S.plans = c.plans || {}; S.common = c.common || null; S.remote = c.remote || {}; } })();
+const saveCache = () => { const keep = {}; Object.keys(S.plans).sort().slice(-12).forEach(k => keep[k] = S.plans[k]); ls.set(CACHE_KEY, {plans: keep, common: S.common, remote: S.remote}); };
+
+/* ============ GITHUB ============ */
+const b64 = s => { const b = new TextEncoder().encode(s); let o = ''; for (let i = 0; i < b.length; i += 0x8000) o += String.fromCharCode.apply(null, b.subarray(i, i + 0x8000)); return btoa(o); };
+const unb64 = s => new TextDecoder().decode(Uint8Array.from(atob(String(s).replace(/\s/g, '')), c => c.charCodeAt(0)));
+const REPO = () => S.cfg.repo || 'hoc-tap-6a14';
+async function api(path, opt = {}){
+  const url = `https://api.github.com/repos/${S.cfg.owner}/${REPO()}/contents/${path}` + (opt.method ? '' : '?t=' + Date.now());
+  const r = await fetch(url, {method: opt.method || 'GET', cache: 'no-store',
+    headers: {Authorization: 'Bearer ' + S.cfg.token, Accept: 'application/vnd.github+json', ...(opt.body ? {'Content-Type': 'application/json'} : {})},
+    body: opt.body ? JSON.stringify(opt.body) : undefined});
+  if (r.status === 404 && opt.allow404) return null;
+  if (!r.ok){ const e = new Error('GitHub ' + r.status); e.status = r.status; try{ e.detail = (await r.json()).message; }catch(_){} throw e; }
+  return r.json();
+}
+async function getJSON(path){ const m = await api(path, {allow404: true}); if (!m) return {obj: null, sha: null}; return {obj: JSON.parse(unb64(m.content || '')), sha: m.sha}; }
+async function listDir(dir){ return (await api(dir, {allow404: true})) || []; }
+
+/* ============ NAP DU LIEU ============ */
+async function loadAll(){
+  const T = today(), days = [T, addDays(T, 1)];
+  const [kh, cg, common] = await Promise.all([listDir('ke-hoach'), listDir('con-ghi'), getJSON('chung/chung.json')]);
+  if (common.obj) S.common = common.obj;
+  // ke hoach: hom nay, ngay mai va cac ngay trong tuan (de tinh tien do)
+  const mon = addDays(T, -((dow(T) + 6) % 7)), want = new Set([...days]);
+  for (let d = addDays(mon, -7); d <= T; d = addDays(d, 1)) want.add(d);
+  const khMap = {}; kh.forEach(f => khMap[f.name.slice(0, 10)] = f.sha);
+  await Promise.all([...want].filter(d => khMap[d] && (!S.plans[d] || S.plans[d]._sha !== khMap[d])).map(async d => {
+    const g = await getJSON('ke-hoach/' + d + '.json'); if (g.obj){ g.obj._sha = g.sha; S.plans[d] = g.obj; } }));
+  days.forEach(d => { if (!khMap[d]) delete S.plans[d]; });
+  // thao tac da gui (30 ngay gan nhat – de tinh huy hieu)
+  const from = addDays(T, -30);
+  await Promise.all(cg.filter(f => /^\d{4}-\d{2}-\d{2}\.json$/.test(f.name) && f.name.slice(0, 10) >= from && (!S.remote[f.name.slice(0, 10)] || S.remote[f.name.slice(0, 10)].sha !== f.sha)).map(async f => {
+    const g = await getJSON('con-ghi/' + f.name); S.remote[f.name.slice(0, 10)] = {sha: g.sha, events: (g.obj && g.obj.events) || []}; }));
+  S.loaded = true; S.loadErr = ''; S.lastSync = hm(new Date()); saveCache();
+}
+async function refresh(quiet){
+  if (!S.cfg.token) return;
+  try{ await flush(); await loadAll(); if (!quiet) toast('Đã cập nhật kế hoạch mới nhất'); }
+  catch(e){ S.loadErr = e.status === 401 ? 'Mã truy cập không đúng hoặc đã hết hạn – nhờ ba nhập lại.' : 'Chưa kết nối được (kiểm tra mạng). Đang dùng bản đã lưu trên máy.'; S.loaded = true; }
+  render();
+}
+
+/* ============ GHI THAO TAC (co hang doi khi mat mang) ============ */
+const rid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+function addEvent(ev){
+  const e = {id: rid(), at: new Date().toISOString(), day: today(), ...ev};
+  S.queue.push(e); ls.set(QUEUE_KEY, S.queue); render(); flushSoon(); return e;
+}
+let flushT = 0, flushing = null;
+function flushSoon(){ clearTimeout(flushT); flushT = setTimeout(() => flush().then(render), 600); }
+async function flush(){
+  if (flushing) return flushing;
+  if (!S.queue.length || !S.cfg.token) return;
+  flushing = (async () => {
+    const byDay = {}; S.queue.forEach(e => (byDay[e.day] = byDay[e.day] || []).push(e));
+    try{
+      for (const [day, evs] of Object.entries(byDay)){
+        for (let tries = 0; tries < 4; tries++){
+          const g = await getJSON('con-ghi/' + day + '.json');
+          const cur = (g.obj && g.obj.events) || [], ids = new Set(cur.map(x => x.id));
+          const merged = cur.concat(evs.filter(x => !ids.has(x.id)));
+          try{
+            const r = await api('con-ghi/' + day + '.json', {method: 'PUT', body: {message: `App con: ${evs.length} thao tác ${day}`, content: b64(JSON.stringify({events: merged}, null, 1)), ...(g.sha ? {sha: g.sha} : {})}});
+            S.remote[day] = {sha: r.content.sha, events: merged};
+            const sent = new Set(evs.map(x => x.id)); S.queue = S.queue.filter(x => !sent.has(x.id)); ls.set(QUEUE_KEY, S.queue);
+            break;
+          }catch(e){ if (e.status === 409 || e.status === 422) continue; throw e; }
+        }
+      }
+      S.syncState = 'ok'; S.lastSync = hm(new Date()); saveCache();
+    }catch(e){ S.syncState = 'err'; setTimeout(flushSoon, 30000); }
+    flushing = null;
+  })();
+  return flushing;
+}
+const allEvents = () => { const seen = new Set(), out = [];
+  Object.values(S.remote).forEach(f => f.events.forEach(e => { if (!seen.has(e.id)){ seen.add(e.id); out.push(e); } }));
+  S.queue.forEach(e => { if (!seen.has(e.id)){ seen.add(e.id); out.push({...e, _pending: true}); } });
+  return out.sort((a, b) => String(a.at).localeCompare(String(b.at))); };
+
+/* ============ TINH TRANG NHIEM VU ============ */
+const PLAN2MARK = {done: 'ok', review: 'unsure', help: 'no'};
+// Dau cua 1 nhiem vu: thao tac moi nhat cua con (neu ba chua xem lai sau do), nguoc lai la trang thai ba ghi
+function markOf(t, evs){
+  const mine = evs.filter(e => e.type === 'mark' && e.taskId === t.id), last = mine[mine.length - 1];
+  const planMark = PLAN2MARK[t.status] || '';
+  if (last && (!t.kidAt || last.at > t.kidAt)) return {mark: last.mark || '', at: last.at, by: 'con', pending: !!last._pending};
+  if (planMark && t.kidMark !== planMark) return {mark: planMark, by: 'ba'};
+  return {mark: planMark, at: t.kidAt || (last && last.at), by: planMark ? 'con' : ''};
+}
+const planTasks = p => (p ? p.groups.flatMap(g => g.tasks.map(t => ({...t, subject: g.subject}))) : []);
+function dayStats(day, evs){
+  const p = S.plans[day], ts = planTasks(p), done = ts.filter(t => ['ok','unsure'].includes(markOf(t, evs).mark)).length;
+  return {total: ts.length, done, all: ts.length && ts.every(t => markOf(t, evs).mark === 'ok')};
+}
+
+/* ============ HUY HIEU ============ */
+function badges(evs){
+  const marks = evs.filter(e => e.type === 'mark' && e.mark);
+  const markDays = [...new Set(marks.map(e => e.day))].sort();
+  // chuoi ngay lien tiep co danh dau (bo qua Chu nhat)
+  let streak = 0, best = 0, prev = '';
+  markDays.forEach(d => { let p = addDays(d, -1); if (dow(p) === 0) p = addDays(p, -1); streak = prev === p ? streak + 1 : 1; best = Math.max(best, streak); prev = d; });
+  let cur = 0; { let d = today(); if (!markDays.includes(d)) d = addDays(d, -1); if (dow(d) === 0) d = addDays(d, -1); while (markDays.includes(d)){ cur++; d = addDays(d, -1); if (dow(d) === 0) d = addDays(d, -1); } }
+  const progDays = new Set(evs.filter(e => e.type === 'progress').map(e => e.day)).size;
+  const honest = marks.filter(e => e.mark !== 'ok').length;
+  const reads = evs.filter(e => e.type === 'read').length;
+  const fullDays = Object.keys(S.plans).filter(d => dayStats(d, evs).all).length;
+  const early = Object.keys(S.plans).filter(d => { const st = dayStats(d, evs); if (!st.total || st.done < st.total) return false;
+    const last = marks.filter(e => e.day === d).map(e => new Date(e.at)).sort((a, b) => b - a)[0]; return last && last.getHours() < 17; }).length;
+  const L = [
+    {em: '🌱', n: 'Bước đầu tiên', d: 'Đánh dấu nhiệm vụ đầu tiên', v: Math.min(1, marks.length), max: 1},
+    {em: '🔥', n: '3 ngày liền', d: 'Đánh dấu bài 3 ngày học liên tiếp', v: Math.min(3, best), max: 3},
+    {em: '🚀', n: 'Tuần bền bỉ', d: '6 ngày học liên tiếp', v: Math.min(6, best), max: 6},
+    {em: '🎯', n: 'Ngày trọn vẹn', d: 'Một ngày mọi bài đều ✓', v: Math.min(1, fullDays), max: 1},
+    {em: '⏰', n: 'Xong trước 5 giờ', d: '3 buổi xong hết trước 17:00', v: Math.min(3, early), max: 3},
+    {em: '📘', n: 'Thư ký lớp', d: 'Nhập bài đã học 5 ngày', v: Math.min(5, progDays), max: 5},
+    {em: '📖', n: 'Mọt sách', d: 'Đọc xong 5 phần kiến thức', v: Math.min(5, reads), max: 5},
+    {em: '🦉', n: 'Trung thực', d: 'Dám đánh ◯ / ✗ khi chưa chắc (3 lần)', v: Math.min(3, honest), max: 3}
+  ];
+  return {list: L, got: L.filter(b => b.v >= b.max).length, cur};
+}
+
+/* ============ TKB ============ */
+const tkbFor = d => { const c = S.common; if (!c || !c.tkb) return null; let v = c.tkb[0]; c.tkb.forEach(x => { if (d >= x.from) v = x; }); return v; };
+function periodsOf(d){
+  const v = tkbFor(d), w = dow(d); if (!v || !w) return [];
+  if (S.common.offDays && S.common.offDays[d]) return [];
+  const cx = (S.common.cancelled && S.common.cancelled[d]) || [];
+  return (v.t[w] || []).filter(p => !cx.includes(p.s));
+}
+const pName = p => p.l || p.s;
+const nextSchool = d => { let x = addDays(d, 1); for (let i = 0; i < 10 && (dow(x) === 0 || (S.common && S.common.offDays && S.common.offDays[x])); i++) x = addDays(x, 1); return x; };
+
+/* ============ VE GIAO DIEN ============ */
+let rq = 0; function render(){ if (rq) return; rq = requestAnimationFrame(() => { rq = 0; renderNow(); }); }
+function toast(t){ S.toast = t; render(); clearTimeout(toast.t); toast.t = setTimeout(() => { S.toast = ''; render(); }, 2600); }
+function celebrate(){
+  if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  const b = document.createElement('div'); b.className = 'burst'; const col = ['#5B43D6','#FFD84D','#1F8A57','#D2443B','#1C4A96'];
+  for (let i = 0; i < 46; i++){ const x = document.createElement('i'); x.style.left = Math.random()*100 + 'vw'; x.style.background = col[i % col.length]; x.style.animationDelay = Math.random()*0.5 + 's'; b.appendChild(x); }
+  document.body.appendChild(b); setTimeout(() => b.remove(), 2400);
+}
+const NAV = [['home','🏠','Hôm nay'],['know','💡','Kiến thức'],['add','✏️','Nhập bài'],['tkb','🗓️','Lịch học'],['award','🏆','Thành tích'],['log','🕒','Nhật ký']];
+
+function renderNow(){
+  const app = document.getElementById('app');
+  if (!S.cfg.token){ app.innerHTML = viewSetup(); return; }
+  const evs = allEvents(), name = S.cfg.name || 'bạn';
+  const views = {home: viewHome, know: viewKnow, add: viewAdd, tkb: viewTkb, award: viewAward, log: viewLog};
+  const syncTxt = S.queue.length ? (S.syncState === 'err' ? `<span class="dot err"></span>Chưa gửi được ${S.queue.length} thao tác – app sẽ tự gửi lại` : '<span class="dot wait"></span>Đang gửi cho ba…') : `<span class="dot"></span>Đã đồng bộ ${S.lastSync || ''}`;
+  app.innerHTML = `<div class="shell">
+    <aside class="side">
+      <div class="brand">${OWL(44)}<b>Góc học tập<br>6A14</b></div>
+      <nav class="nav" aria-label="Mục">${NAV.map(([k, i, n]) => `<button data-tab="${k}" aria-current="${S.tab === k ? 'page' : 'false'}"><span class="ic">${i}</span>${n}</button>`).join('')}</nav>
+      <div class="owlbox">Tự làm trước, đánh dấu chỗ khó, rồi mới hỏi ba nhé!</div>
+    </aside>
+    <main class="main">
+      <div class="top">
+        <div class="grow"><h1>Chào ${esc(name)}! 👋</h1><div class="sub">${DAYS[dow(today())]}, ${pd(today()).getDate()}/${pd(today()).getMonth()+1}/${pd(today()).getFullYear()}</div></div>
+        <div class="sync" role="status">${syncTxt} <button class="btn line" style="padding:4px 10px;font-size:12px" data-act="refresh">🔄 Tải lại</button></div>
+      </div>
+      ${S.loadErr ? `<p class="err">${esc(S.loadErr)}</p>` : ''}
+      ${!S.loaded && !Object.keys(S.plans).length ? `<div class="panel" style="margin-top:20px"><div class="empty-state">${OWL(90)}<h2>Đang tải kế hoạch…</h2></div></div>` : views[S.tab](evs)}
+    </main></div>
+    ${S.toast ? `<div class="toast" role="status">${esc(S.toast)}</div>` : ''}`;
+}
+
+function viewSetup(){
+  const c = S.cfg;
+  return `<div class="setup">${OWL(72)}<h1>Góc học tập 6A14</h1>
+    <p class="muted">Lần đầu mở app trên máy này: ba nhập giúp con 1 lần là xong.</p>
+    <div class="form">
+      <label class="f">Tên con muốn app gọi <input type="text" id="sName" value="${esc(c.name || '')}" placeholder="Ví dụ: Minh"></label>
+      <label class="f">Tài khoản GitHub của ba <input type="text" id="sOwner" value="${esc(c.owner || '84bcngo')}"></label>
+      <label class="f">Mã truy cập của con (may-con) <input type="password" id="sToken" placeholder="github_pat_..."></label>
+      ${S.setupErr ? `<p class="err">${esc(S.setupErr)}</p>` : ''}
+      <button class="btn" data-act="setup" ${S.busy ? 'disabled' : ''}>${S.busy ? 'Đang kiểm tra…' : 'Bắt đầu'}</button>
+      <p class="small muted">Mã chỉ lưu trên máy này và chỉ mở được kho học tập của con.</p>
+    </div></div>`;
+}
+
+/* ---- HOM NAY ---- */
+function viewHome(evs){
+  const T = today(), day = S.view === 'today' ? T : addDays(T, 1), p = S.plans[day];
+  const stT = dayStats(T, evs), bd = badges(evs);
+  const tm = nextSchool(T), exams = ((S.common && S.common.exams) || []).filter(e => e.due >= T).slice(0, 4);
+  const startEv = evs.find(e => e.type === 'start' && e.day === T), finEv = [...evs].reverse().find(e => e.type === 'finish' && e.day === T);
+  const pct = stT.total ? Math.round(stT.done * 100 / stT.total) : 0;
+  return `
+  <div class="stats">
+    <div class="stat"><span class="em">✅</span><div style="flex:1"><b>${stT.done}/${stT.total}</b><span>Nhiệm vụ hôm nay</span><div class="bar"><i style="width:${pct}%"></i></div></div></div>
+    <div class="stat"><span class="em">🔥</span><div><b>${bd.cur}</b><span>Ngày học liên tiếp</span></div></div>
+    <div class="stat"><span class="em">🏅</span><div><b>${bd.got}/${bd.list.length}</b><span>Huy hiệu đã có</span></div></div>
+    <div class="stat"><span class="em">${startEv ? '⏱️' : '▶️'}</span><div><b>${startEv ? hm(startEv.at) : '--:--'}</b><span>${startEv ? 'Bắt đầu học lúc' : 'Chưa bấm bắt đầu'}</span></div></div>
+  </div>
+  <div class="cols">
+    <div>
+      <div class="panel">
+        <div class="ph"><h2>Việc cần làm</h2>
+          <div class="daytoggle" role="group" aria-label="Chọn ngày"><button data-act="view" data-v="today" aria-pressed="${S.view === 'today'}">Chiều nay</button><button data-act="view" data-v="tomorrow" aria-pressed="${S.view === 'tomorrow'}">Ngày mai</button></div></div>
+        ${planHTML(p, day, evs)}
+      </div>
+    </div>
+    <div>
+      <div class="panel">
+        <div class="ph"><h2>Mai ${fmt(tm)} học</h2></div>
+        ${periodsOf(tm).length ? `<ul class="periods">${periodsOf(tm).map((x, i) => `<li><span class="n">${i+1}</span><span class="chip" style="${sjStyle(x.s)}">${ic(x.s)} ${esc(pName(x))}</span></li>`).join('')}</ul>` : '<p class="muted small">Chưa có thời khóa biểu.</p>'}
+      </div>
+      <div class="panel">
+        <div class="ph"><h2>Sắp kiểm tra</h2></div>
+        ${exams.length ? exams.map(e => { const n = Math.round((pd(e.due) - pd(T)) / 864e5); return `<div class="exam"><div class="cd">${n}<small>ngày</small></div><div><b>${esc(e.subject)}</b><div class="small muted">${fmt(e.due)}</div></div></div>`; }).join('') : '<p class="muted small">Chưa có lịch kiểm tra.</p>'}
+      </div>
+      <div class="panel">
+        <div class="ph"><h2>Báo ba</h2></div>
+        <div class="actions" style="margin-top:0">
+          ${startEv ? '' : '<button class="btn hi" data-act="start">▶️ Con bắt đầu học</button>'}
+          <button class="btn soft" data-act="finish">${finEv ? '🏁 Báo lại: con xong rồi' : '🏁 Con xong buổi chiều'}</button>
+        </div>
+        ${finEv ? `<p class="ok-note">Đã báo ba lúc ${hm(finEv.at)}</p>` : ''}
+        <label class="f" style="margin-top:12px">Nhắn ba (chỗ khó, cần mua đồ dùng…)<textarea id="noteTxt" placeholder="Ví dụ: Bài 4.12 con chưa hiểu đề">${esc(S.note)}</textarea></label>
+        <div class="actions"><button class="btn line" data-act="note">💬 Gửi lời nhắn</button></div>
+      </div>
+    </div>
+  </div>`;
+}
+function planHTML(p, day, evs){
+  if (!p) return `<div class="empty-state">${OWL(90)}<h3>${S.view === 'today' ? 'Ba chưa giao kế hoạch chiều nay' : 'Chưa có kế hoạch ngày mai'}</h3>
+    <p class="muted small">Con xem eNetViet và vở ghi. Có bài mới thì vào mục <b>Nhập bài</b> báo ba nhé.</p></div>`;
+  const T = today(), now = new Date(), nowM = now.getHours() * 60 + now.getMinutes();
+  const toM = s => { const m = String(s || '').match(/(\d+):(\d+)/); return m ? +m[1] * 60 + +m[2] : null; };
+  const head = (p.head || []).map(x => `<p>${esc(x)}</p>`).join('');
+  const blocks = p.groups.map(g => {
+    const st = toM(g.start), en = toM(g.end);
+    const ms = g.tasks.map(t => markOf(t, evs).mark), allDone = ms.length && ms.every(m => m === 'ok' || m === 'unsure');
+    const isNow = day === T && st != null && en != null && nowM >= st && nowM < en && !allDone;
+    return `<div class="blk ${isNow ? 'now' : ''} ${allDone ? 'done' : ''}">
+      <div class="clock">${esc(g.start || '')}<small>${g.min ? '~' + g.min + ' phút' : ''}</small></div><span class="pin"></span>
+      <div class="sj"><div class="sjh" style="${sjStyle(g.subject)}">${ic(g.subject)} ${esc(g.title || g.subject)}${g.exam ? '<span class="tag red">Ôn kiểm tra</span>' : isNow ? '<span class="tag">Đang tới giờ</span>' : allDone ? '<span class="tag">Xong 🎉</span>' : ''}</div>
+      ${g.tasks.map(t => taskHTML(t, g, evs, day)).join('')}
+      ${(g.hints || []).length ? `<p class="hint">${g.hints.map(h => { const i = h.indexOf(':'); return i > 0 ? `<b>${esc(h.slice(0, i))}:</b>${esc(h.slice(i + 1))}` : esc(h); }).join('<br>')}</p>` : ''}
+      </div></div>`;
+  }).join('');
+  return `<div class="headline">${OWL(52)}<div><div class="t">${esc(p.title)}</div>${head}</div></div>
+    ${p.knowledge && p.knowledge.length ? `<div class="actions"><button class="btn soft" data-tab="know">💡 Đọc ${p.knowledge.length} phần kiến thức cần nắm trước</button></div>` : ''}
+    <div class="timeline">${blocks || '<p class="muted">Không có bài tập cho buổi này. 🌿</p>'}</div>
+    ${p.memo ? '<p class="hint" style="border:0;border-radius:12px"><b>🧠 Học thuộc:</b> làm sau bài tập – gấp vở, tự nói to từng dòng có ⭐ ở mục Kiến thức. Tối ba hỏi bài.</p>' : ''}
+    <div class="legend"><span><b style="color:var(--ok)">${MARK_SVG.ok}</b> xong đủ</span><span><b style="color:var(--mid)">${MARK_SVG.unsure}</b> xong nhưng chưa chắc đúng</span><span><b style="color:var(--no)">${MARK_SVG.no}</b> chưa xong / không làm được</span></div>
+    ${(p.tail || []).length ? `<ul class="tail">${p.tail.map(x => `<li>${esc(x)}</li>`).join('')}</ul>` : ''}`;
+}
+const todo = t => { const n = String((t.snap && t.snap.note) || '').split('||')[0].trim(); return /^Việc cần làm:/.test(n) ? n : ''; };
+function taskHTML(t, g, evs, day){
+  const m = markOf(t, evs);
+  const who = m.mark ? (m.by === 'ba' ? 'Ba đã xem và đổi dấu' : m.at ? 'Con đánh dấu lúc ' + hm(m.at) + (m.pending ? ' · chờ gửi' : '') : '') : '';
+  return `<div class="task ${m.mark ? 'm-' + m.mark : ''}">
+    <div class="txt"><span class="src">${esc(t.src)}</span><span class="body">${esc(t.text)}</span>${t.tag ? `<span class="debt">${esc(t.tag)}</span>` : ''}${t.fromKid ? ' <span class="src">con nhập</span>' : ''}${todo(t) ? `<div class="when" style="color:var(--ink)">📌 ${esc(todo(t))}</div>` : ''}
+      ${who ? `<div class="when">${esc(who)}</div>` : ''}</div>
+    <div class="stamps" role="group" aria-label="Đánh dấu">${Object.entries(MARKS).map(([k, v]) => `<button class="stamp ${v.c}" title="${v.n}" aria-label="${v.n}" aria-pressed="${m.mark === k}" data-act="mark" data-id="${esc(t.id)}" data-day="${day}" data-v="${k}">${MARK_SVG[k]}</button>`).join('')}</div>
+  </div>`;
+}
+
+/* ---- KIEN THUC ---- */
+function viewKnow(evs){
+  const T = today(), day = S.view === 'today' ? T : addDays(T, 1), p = S.plans[day], ks = (p && p.knowledge) || [];
+  const readIds = new Set(evs.filter(e => e.type === 'read' && e.planDay === day).map(e => e.kid));
+  return `<div class="panel" style="margin:20px 0 16px"><div class="ph"><h2>Kiến thức cần nắm – ${S.view === 'today' ? 'chiều nay' : 'ngày mai'}</h2>
+    <div class="daytoggle" role="group"><button data-act="view" data-v="today" aria-pressed="${S.view === 'today'}">Chiều nay</button><button data-act="view" data-v="tomorrow" aria-pressed="${S.view === 'tomorrow'}">Ngày mai</button></div></div>
+    <p class="small muted" style="margin:0">Đọc trước khi làm bài tập. Dòng có ⭐ là phần cần học thuộc. Bấm <b>🙈 Tự kiểm tra</b> để che các dòng ⭐, tự nói to rồi bấm vào dòng để xem lại.</p></div>
+    ${ks.length ? `<div class="kgrid">${ks.map(k => { const q = !!S.quiz[k.id], rd = readIds.has(k.id); return `<article class="kcard ${q ? 'quiz' : ''}">
+      <header style="${sjStyle(k.subject || k.label)}"><div class="small" style="font-weight:700">${ic(k.subject || k.label)} ${esc(k.label)}${k.pages ? ' · ' + esc(k.pages) : ''}</div><h3>${esc(k.title)}</h3>${k.upTo ? `<div class="small">Phần đã học đến tr.${k.upTo}</div>` : ''}</header>
+      ${(k.relearn || []).length ? `<div class="mis" style="margin-top:12px"><b>Học lại (lần trước chưa thuộc):</b><br>${k.relearn.map(esc).join('<br>')}</div>` : ''}
+      <ul>${k.lines.map((l, i) => `<li class="${l.star ? 'star' : ''} ${S.reveal[k.id + '#' + i] ? 'show' : ''}" ${q && l.star ? `data-act="reveal" data-k="${esc(k.id + '#' + i)}"` : ''}><span class="k">${esc(l.x)}</span></li>`).join('')}</ul>
+      ${(k.mistakes || []).length ? `<div class="mis"><b>Lỗi hay gặp:</b><br>${k.mistakes.map(esc).join('<br>')}</div>` : ''}
+      <footer><button class="btn line" data-act="quiz" data-k="${esc(k.id)}">${q ? '👀 Hiện hết' : '🙈 Tự kiểm tra'}</button>
+        ${rd ? '<span class="ok-note">✓ Con đã đọc xong</span>' : `<button class="btn soft" data-act="read" data-k="${esc(k.id)}" data-t="${esc(k.label + ' – ' + k.title)}" data-day="${day}">📖 Con đã đọc xong</button>`}</footer>
+    </article>`; }).join('')}</div>` : `<div class="panel"><div class="empty-state">${OWL(90)}<h3>Không có phần kiến thức nào cho buổi này</h3><p class="muted small">Con ôn lại vở ghi các môn có tiết ngày mai nhé.</p></div></div>`}`;
+}
+
+/* ---- NHAP BAI ---- */
+function viewAdd(evs){
+  const T = today(), subs = [...new Set(periodsOf(T).map(x => x.s).filter(s => !SKIP_PROG.has(s)))];
+  const doneP = evs.filter(e => e.type === 'progress' && e.day === T);
+  const allSubs = (S.common && S.common.subjects) || ['Toán','Văn','Tiếng Anh','KHTN','LS&ĐL','Công nghệ','GDCD','Tin học','GDĐP','Âm nhạc','Mĩ thuật','Thể dục','HĐTN','Khác'];
+  const newT = evs.filter(e => e.type === 'newtask' && e.day === T);
+  return `<div class="cols" style="margin-top:20px"><div>
+    <div class="panel"><div class="ph"><h2>Sáng nay trên lớp học bài gì?</h2><span class="small muted">${DAYS[dow(T)]} ${fmt(T)}</span></div>
+      <p class="small muted" style="margin-top:0">Ghi số bài và trang đã học tới đâu theo vở ghi. Ba dựa vào đây để giao bài chiều nay.</p>
+      ${subs.length ? `<div class="form">${subs.map(sj => { const v = S.prog[sj] || {}, d = [...doneP].reverse().find(e => e.subject === sj); return `<div class="frow">
+        <span class="chip" style="${sjStyle(sj)}">${ic(sj)} ${esc(sj)}</span>
+        <label class="f">Bài số<input type="text" data-prog="${esc(sj)}" data-k="lesson" value="${esc(v.lesson ?? (d ? d.lesson : ''))}" placeholder="vd 20 hoặc 19, 20"></label>
+        <label class="f">Trang<input type="text" data-prog="${esc(sj)}" data-k="pages" value="${esc(v.pages ?? (d ? d.pages : ''))}" placeholder="90–92"></label>
+        <label class="f">Phần / ghi chú<input type="text" data-prog="${esc(sj)}" data-k="part" value="${esc(v.part ?? (d ? d.part : ''))}" placeholder="vd Luyện tập 2"></label>
+      </div>`; }).join('')}</div>
+      <div class="actions"><button class="btn" data-act="saveProg">💾 Gửi bài đã học cho ba</button>${doneP.length ? `<span class="ok-note">Đã gửi ${new Set(doneP.map(e => e.subject)).size} môn · lần cuối ${hm(doneP[doneP.length-1].at)}</span>` : ''}</div>`
+      : '<p class="muted">Hôm nay không có tiết học cần ghi.</p>'}
+    </div></div>
+    <div><div class="panel"><div class="ph"><h2>Cô giao bài mới</h2></div>
+      <div class="form">
+        <label class="f">Môn<select data-nt="subject"><option value="">– chọn môn –</option>${allSubs.map(s => `<option ${S.nt.subject === s ? 'selected' : ''}>${esc(s)}</option>`).join('')}</select></label>
+        <label class="f">Bài tập (ghi đúng như cô dặn)<textarea data-nt="content" placeholder="vd SBT tr.33: câu 2.12, 2.13">${esc(S.nt.content)}</textarea></label>
+        <label class="f">Làm ở đâu<select data-nt="source">${[['V','Vở'],['S','SBT'],['G','SGK'],['W','eNetViet'],['H','Ôn / học thuộc'],['P','Sản phẩm nộp']].map(([k, n]) => `<option value="${k}" ${S.nt.source === k ? 'selected' : ''}>${n}</option>`).join('')}</select></label>
+        <label class="f">Hạn nộp<input type="date" data-nt="due" value="${esc(S.nt.due)}"></label>
+        <button class="btn" data-act="newTask">➕ Báo bài mới cho ba</button>
+      </div>
+      ${newT.length ? `<ul class="tail" style="margin-top:12px">${newT.map(e => `<li>${hm(e.at)} · <b>${esc(e.subject)}</b> ${esc(e.content)}${e.due ? ' · hạn ' + fmt(e.due) : ''}</li>`).join('')}</ul>` : ''}
+    </div></div></div>`;
+}
+
+/* ---- LICH HOC ---- */
+function viewTkb(){
+  const T = today(), mon = addDays(T, -((dow(T) + 6) % 7)), days = [0,1,2,3,4,5].map(i => addDays(mon, i));
+  const rows = Math.max(5, ...days.map(d => periodsOf(d).length));
+  const v = tkbFor(T), exams = ((S.common && S.common.exams) || []).filter(e => e.due >= T), eng = (S.common && S.common.english) || [];
+  return `<div class="panel" style="margin-top:20px"><div class="ph"><h2>Thời khóa biểu tuần này</h2><span class="small muted">${v ? 'TKB số ' + v.no + ' · áp dụng từ ' + fmt(v.from) : ''}</span></div>
+    <div style="overflow-x:auto"><table class="tkb"><thead><tr><th></th>${days.map(d => `<th class="${d === T ? 'today' : ''}">${SHORT[dow(d)]}<br><span class="small">${pd(d).getDate()}/${pd(d).getMonth()+1}</span></th>`).join('')}</tr></thead>
+    <tbody>${Array.from({length: rows}, (_, r) => `<tr><td class="pno">${r+1}</td>${days.map(d => { const p = periodsOf(d)[r]; return p ? `<td class="${d === T ? 'today' : ''}" style="${sjStyle(p.s)}">${ic(p.s)} ${esc(pName(p))}</td>` : '<td class="empty"></td>'; }).join('')}</tr>`).join('')}</tbody></table></div>
+    ${eng.length ? `<p class="small muted">🎧 Tối ${eng.map(w => SHORT[w]).join(', ')}: học Alokiddy 20:00–21:00 – làm xong bài trong buổi chiều.</p>` : ''}
+  </div>
+  <div class="panel"><div class="ph"><h2>Lịch kiểm tra</h2></div>
+    ${exams.length ? exams.map(e => { const n = Math.round((pd(e.due) - pd(T)) / 864e5); return `<div class="exam"><div class="cd">${n}<small>ngày</small></div><div><b>${ic(e.subject)} ${esc(e.subject)}</b> – ${fmt(e.due)}<div class="small muted">Buổi ôn cuối: chiều hôm trước</div></div></div>`; }).join('') : '<p class="muted">Chưa có lịch kiểm tra.</p>'}
+  </div>`;
+}
+
+/* ---- THANH TICH ---- */
+function viewAward(evs){
+  const bd = badges(evs), T = today(), mon = addDays(T, -((dow(T) + 6) % 7)), per = {};
+  for (let d = mon; d <= T; d = addDays(d, 1)) planTasks(S.plans[d]).forEach(t => { const x = per[t.subject] = per[t.subject] || {n: 0, ok: 0}; x.n++; if (['ok','unsure'].includes(markOf(t, evs).mark)) x.ok++; });
+  const sc = (S.common && S.common.scores) || [];
+  return `<div class="panel" style="margin-top:20px"><div class="ph"><h2>Huy hiệu</h2><span class="small muted">${bd.got}/${bd.list.length} đã mở</span></div>
+    <div class="badges">${bd.list.map(b => `<div class="badge ${b.v >= b.max ? 'got' : ''}"><span class="em">${b.em}</span><h3>${esc(b.n)}</h3><p>${esc(b.d)}</p><div class="bar"><i style="width:${Math.round(b.v * 100 / b.max)}%"></i></div><p>${b.v}/${b.max}</p></div>`).join('')}</div></div>
+  <div class="panel"><div class="ph"><h2>Tuần này con đã làm</h2><span class="small muted">từ ${fmt(mon)}</span></div>
+    ${Object.keys(per).length ? `<div class="sjbars">${Object.entries(per).sort((a, b) => b[1].n - a[1].n).map(([sj, x]) => `<div class="sjbar" style="${sjStyle(sj)}"><div class="small" style="font-weight:700">${ic(sj)} ${esc(sj)}</div><b>${x.ok}/${x.n}</b> <span class="small">nhiệm vụ</span><div class="bar"><i style="width:${Math.round(x.ok * 100 / x.n)}%"></i></div></div>`).join('')}</div>` : '<p class="muted">Chưa có dữ liệu tuần này.</p>'}
+  </div>
+  <div class="panel"><div class="ph"><h2>Điểm gần đây</h2></div>
+    ${sc.length ? `<table class="scores">${sc.map(x => `<tr><td>${esc(fmt(x.date))}</td><td><b>${esc(x.subject)}</b><div class="small muted">${esc(x.type)}</div></td><td class="v">${esc(typeof x.value === 'number' ? String(x.value).replace('.', ',') : x.value)}</td></tr>`).join('')}</table>` : '<p class="muted">Chưa có điểm.</p>'}
+  </div>`;
+}
+
+/* ---- NHAT KY ---- */
+function viewLog(evs){
+  const T = today(), days = [...new Set(evs.map(e => e.day))].sort().reverse().slice(0, 7);
+  const line = e => e.type === 'mark' ? `${e.mark ? MARKS[e.mark].s + ' ' + MARKS[e.mark].n : '↺ Bỏ đánh dấu'} – <b>${esc(e.subject || '')}</b> ${esc(e.text || '')}`
+    : e.type === 'progress' ? `📘 Bài đã học – <b>${esc(e.subject)}</b> bài ${esc(e.lesson)}${e.pages ? ' tr.' + esc(e.pages) : ''}`
+    : e.type === 'newtask' ? `📝 Bài mới – <b>${esc(e.subject)}</b> ${esc(e.content)}`
+    : e.type === 'read' ? `📖 Đọc xong kiến thức – ${esc(e.text || '')}`
+    : e.type === 'start' ? '▶️ Bắt đầu học' : e.type === 'finish' ? '🏁 Báo ba: con xong buổi chiều' : e.type === 'note' ? `💬 Nhắn ba: ${esc(e.text)}` : esc(e.type);
+  return `<div class="panel" style="margin-top:20px"><div class="ph"><h2>Nhật ký thao tác</h2><span class="small muted">Ba xem được các dòng này kèm giờ</span></div>
+    ${days.length ? days.map(d => `<h3 style="font-size:18px;margin:14px 0 4px">${d === T ? 'Hôm nay' : DAYS[dow(d)]} ${fmt(d)}</h3><ul class="log">${evs.filter(e => e.day === d).reverse().map(e => `<li><time>${hm(e.at)}</time><span>${line(e)}${e._pending ? '<span class="pend">chờ gửi</span>' : ''}</span></li>`).join('')}</ul>`).join('') : '<p class="muted">Chưa có thao tác nào.</p>'}
+    <div class="actions"><button class="btn line" data-act="logout">Đăng xuất khỏi máy này</button></div></div>`;
+}
+
+/* ============ SU KIEN ============ */
+const app = document.getElementById('app');
+app.addEventListener('input', e => {
+  const d = e.target.dataset;
+  if (d.prog){ S.prog[d.prog] = S.prog[d.prog] || {}; S.prog[d.prog][d.k] = e.target.value; }
+  if (d.nt) S.nt[d.nt] = e.target.value;
+  if (e.target.id === 'noteTxt') S.note = e.target.value;
+});
+app.addEventListener('click', async e => {
+  const el = e.target.closest('[data-tab],[data-act]'); if (!el) return;
+  const d = el.dataset;
+  if (d.tab){ S.tab = d.tab; history.replaceState(null, '', '#' + d.tab); render(); window.scrollTo(0, 0); return; }
+  switch (d.act){
+    case 'setup': {
+      const name = document.getElementById('sName').value.trim(), owner = document.getElementById('sOwner').value.trim(), token = document.getElementById('sToken').value.trim();
+      if (!owner || !token){ S.setupErr = 'Nhập tài khoản GitHub và mã truy cập.'; render(); return; }
+      S.busy = true; S.setupErr = ''; render();
+      const old = S.cfg; S.cfg = {name, owner, token};
+      try{ await api('', {}); ls.set(CFG_KEY, S.cfg); await refresh(true); }
+      catch(x){ S.cfg = old; S.setupErr = x.status === 401 ? 'Mã truy cập không đúng.' : x.status === 404 ? 'Không mở được kho ' + owner + '/hoc-tap-6a14 – kiểm tra tên tài khoản và quyền của mã.' : 'Chưa kết nối được: ' + (x.detail || x.message); }
+      S.busy = false; render(); break; }
+    case 'refresh': await refresh(); break;
+    case 'view': S.view = d.v; render(); break;
+    case 'mark': {
+      const p = S.plans[d.day], t = planTasks(p).find(x => x.id === d.id); if (!t) return;
+      const cur = markOf(t, allEvents()).mark, mark = cur === d.v ? '' : d.v;
+      addEvent({type: 'mark', taskId: t.id, mark, planDay: d.day, subject: t.subject, text: t.text, snap: t.snap});
+      if (mark){ const st = dayStats(d.day, allEvents()); if (st.total && st.done === st.total){ celebrate(); toast('Xong hết nhiệm vụ! Nhớ soạn cặp và tự dò lại nhé 🎉'); } else toast(MARKS[mark].n + ' · ' + hm(new Date())); }
+      else toast('Đã bỏ đánh dấu');
+      break; }
+    case 'start': addEvent({type: 'start'}); toast('Chúc con học tốt! Ba sẽ thấy giờ bắt đầu.'); break;
+    case 'finish': { const st = dayStats(today(), allEvents()); addEvent({type: 'finish', text: st.total ? `${st.done}/${st.total} nhiệm vụ` : ''}); toast('Đã báo ba con xong buổi chiều'); break; }
+    case 'note': if (!S.note.trim()){ toast('Con viết lời nhắn trước nhé'); return; } addEvent({type: 'note', text: S.note.trim()}); S.note = ''; toast('Đã gửi lời nhắn cho ba'); break;
+    case 'quiz': S.quiz[d.k] = !S.quiz[d.k]; render(); break;
+    case 'reveal': S.reveal[d.k] = !S.reveal[d.k]; render(); break;
+    case 'read': addEvent({type: 'read', kid: d.k, text: d.t, planDay: d.day}); toast('Giỏi lắm! Giờ làm bài tập nào ✏️'); break;
+    case 'saveProg': {
+      let n = 0;
+      Object.entries(S.prog).forEach(([sj, v]) => { if (!String(v.lesson || '').trim()) return; addEvent({type: 'progress', subject: sj, lesson: String(v.lesson).trim(), pages: String(v.pages || '').trim(), part: String(v.part || '').trim()}); n++; });
+      if (!n){ toast('Con ghi số bài trước nhé'); return; } S.prog = {}; toast('Đã gửi bài đã học ' + n + ' môn cho ba'); break; }
+    case 'newTask': {
+      const t = S.nt; if (!t.subject || !t.content.trim()){ toast('Chọn môn và ghi nội dung bài'); return; }
+      addEvent({type: 'newtask', subject: t.subject, content: t.content.trim(), source: t.source, due: t.due}); S.nt = {subject: '', content: '', source: 'V', due: ''}; toast('Đã báo bài mới cho ba'); break; }
+    case 'logout': if (confirm('Đăng xuất khỏi máy này? Ba sẽ phải nhập lại mã.')){ localStorage.removeItem(CFG_KEY); S.cfg = {}; render(); } break;
+  }
+});
+window.addEventListener('online', () => { flushSoon(); refresh(true); });
+window.addEventListener('focus', () => refresh(true));
+setInterval(() => refresh(true), 120000);
+setInterval(render, 60000);   // cap nhat thanh "dang toi gio"
+render();
+if (S.cfg.token) refresh(true);
+</script>
+</body>
+</html>
