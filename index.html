@@ -46,7 +46,7 @@ h1,h2,h3{font-family:var(--f-disp);line-height:1.15;margin:0}
 .nav button[aria-current="page"]{background:var(--violet-soft);color:var(--violet)}
 .nav button:hover{color:var(--ink)}
 .side .owlbox{margin-top:auto;padding:12px;border-radius:var(--r-md);background:var(--hi-soft);font:600 15px/1.35 var(--f-disp);color:#6B5200}
-.main{padding:22px 28px 90px;max-width:1240px;width:100%}
+.main{padding:22px 32px 90px;width:100%;min-width:0}
 
 /* ---- dau trang ---- */
 .top{display:flex;align-items:center;gap:16px;flex-wrap:wrap}
@@ -70,7 +70,7 @@ h1,h2,h3{font-family:var(--f-disp);line-height:1.15;margin:0}
 .bar i{display:block;height:100%;background:var(--ok);border-radius:99px;transition:width .4s}
 
 /* ---- bo cuc 2 cot ---- */
-.cols{display:grid;grid-template-columns:minmax(0,1fr) 330px;gap:20px;align-items:start}
+.cols{display:grid;grid-template-columns:minmax(0,1fr) clamp(330px,26%,440px);gap:20px;align-items:start}
 .panel{background:var(--card);border:2px solid var(--line);border-radius:var(--r-lg);padding:18px 20px}
 .panel + .panel{margin-top:16px}
 .panel h2{font-size:22px;font-weight:700}
