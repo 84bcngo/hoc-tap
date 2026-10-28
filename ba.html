@@ -2269,6 +2269,8 @@ app.addEventListener('click', async e => {
     case 'aiWeek': aiWeek(); break;
     case 'localConnect': await STORE().connect(); render(); break;
     case 'kidSync': await ingestKid(); schedulePublish(0); break;
+    case 'kidGrade': kidGradeSet(d.ev, {grades: {[d.q]: d.v}}); break;
+    case 'kidComment': kidGradeSet(d.ev, {comment: (document.getElementById('kc_' + d.ev) || {}).value || ''}); break;
     case 'storeFile': try{ localStorage.setItem('tro-ly-6a14-store', 'file'); }catch(x){} location.reload(); break;
     case 'storeGh': try{ localStorage.removeItem('tro-ly-6a14-store'); }catch(x){} location.reload(); break;
     case 'ghLogout': GH.disconnect(); location.reload(); break;
@@ -2674,7 +2676,7 @@ async function publishKid(){
 const stamp0 = () => { const d = new Date(); return `${d.getHours()}:${String(d.getMinutes()).padStart(2,'0')}`; };
 
 /* ============ DOC SU KIEN CON GHI TREN APP HOC SINH ============ */
-const KID = {events: [], sha: {}, files: {}, busy: false};
+const KID = {events: [], sha: {}, files: {}, busy: false, grades: {}, gsha: {}, gT: {}, open: {}, cdraft: {}};
 const KID_MARK = {ok: 'done', unsure: 'review', no: 'help'};
 async function ingestKid(){
   if (S.store !== 'gh' || GH.st.status !== 'ok' || KID.busy) return;
@@ -2684,6 +2686,8 @@ async function ingestKid(){
     const from = addDays(TODAY, -14);
     const ls = (await GH.kidList('con-ghi')).filter(f => /^\d{4}-\d{2}-\d{2}\.json$/.test(f.name) && f.name.slice(0, 10) >= from);
     for (const f of ls){ if (KID.sha[f.name] === f.sha) continue; const g = await GH.kidGet('con-ghi/' + f.name); KID.files[f.name] = (g.obj && g.obj.events) || []; KID.sha[f.name] = f.sha; }
+    const cb = (await GH.kidList('cham-bai')).filter(f => /\.json$/.test(f.name));
+    for (const f of cb){ const id = f.name.replace(/\.json$/, ''); if (KID.gsha[id] === f.sha) continue; const g = await GH.kidGet('cham-bai/' + f.name); if (g.obj){ KID.grades[id] = g.obj; KID.gsha[id] = g.sha; } }
     KID.events = Object.values(KID.files).flat().sort((a,b) => String(a.at).localeCompare(String(b.at)));
     const seen = (S.meta && S.meta.kidSeen) || {}, newSeen = {};
     for (const ev of KID.events){
@@ -2723,6 +2727,35 @@ async function applyKid(ev){
   }
   // note / read: chi hien trong khung "Con bao tren app"
 }
+// Bai on dien tu con nop: diem tu cham + cau sai + cau tu luan de ba cham (ket qua gui ve kho cua con: cham-bai/<idSuKien>.json)
+function quizLineHTML(e){
+  const G = KID.grades[e.id] || {}, gs = G.grades || {}, texts = e.texts || [], det = e.detail || [];
+  const nG = texts.filter(t => gs[t.qid]).length;
+  return `📤 Nộp bài ôn <b>${esc(e.subject)}</b> (lần ${e.attempt || 1}${e.min ? ', ' + e.min + ' phút' : ''}): <b>${e.got}/${e.max}</b> ý trắc nghiệm đúng${texts.length ? ` · tự luận ${nG ? 'ba đã chấm ' + nG + '/' + texts.length : '<b style="color:var(--p1)">' + texts.length + ' câu chờ ba chấm</b>'}` : ''}
+    <details ${KID.open[e.id] ? 'open' : ''} data-kidq="${esc(e.id)}" style="margin:6px 0 4px"><summary class="small" style="cursor:pointer">Xem bài làm${det.length ? ' · ' + det.length + ' câu sai' : ''}</summary>
+    ${det.length ? `<div class="small" style="margin:6px 0"><b>Câu sai:</b><ul style="margin:4px 0;padding-left:18px">${det.map(d => `<li><b>${esc(d.label)}</b> – con: ${esc(d.yours || '(trống)')} · đúng: ${esc(d.right)}</li>`).join('')}</ul></div>` : '<p class="small">Trắc nghiệm đúng hết.</p>'}
+    ${texts.map(t => `<div class="small" style="border:1px solid var(--line);border-radius:10px;padding:8px 10px;margin:6px 0">
+      <b>${esc(t.label)}</b> – ${esc(t.prompt)}<br><span class="muted">Con viết:</span> ${esc(t.text) || '<i>(bỏ trống)</i>'}<br><span class="muted">Gợi ý đáp án:</span> ${esc(t.model)}<br>
+      <span class="muted">Máy dò được ${t.hits}/${t.need} ý chính.</span>
+      <span style="display:inline-flex;gap:6px;margin-left:6px"><button class="btn ${gs[t.qid]==='dat'?'':'ghost'}" style="padding:2px 10px;font-size:12px" data-act="kidGrade" data-ev="${esc(e.id)}" data-q="${esc(t.qid)}" data-v="dat">✓ Đạt</button><button class="btn ${gs[t.qid]==='chua'?'':'ghost'}" style="padding:2px 10px;font-size:12px" data-act="kidGrade" data-ev="${esc(e.id)}" data-q="${esc(t.qid)}" data-v="chua">✗ Chưa đạt</button></span></div>`).join('')}
+    <div class="row small" style="gap:6px;margin-top:6px"><input id="kc_${esc(e.id)}" value="${esc(KID.cdraft[e.id] ?? (G.comment || ''))}" placeholder="Nhận xét cho con (tuỳ chọn)" style="flex:1;min-width:200px"><button class="btn ghost" style="padding:2px 10px;font-size:12px" data-act="kidComment" data-ev="${esc(e.id)}">Gửi nhận xét</button>${G.at ? `<span class="muted">đã gửi ${stamp0At(G.at)}</span>` : ''}</div>
+    </details>`;
+}
+const stamp0At = at => { const d = new Date(at); return isNaN(d) ? '' : `${d.getHours()}:${String(d.getMinutes()).padStart(2,'0')}`; };
+function kidGradeSet(evId, patch){
+  const e = KID.events.find(x => x.id === evId); if (!e) return;
+  const G = KID.grades[evId] = {quizId: e.quizId, ev: evId, subject: e.subject, grades: {}, ...(KID.grades[evId] || {})};
+  if (patch.grades) G.grades = {...G.grades, ...patch.grades}; if (patch.comment !== undefined) G.comment = patch.comment;
+  G.at = new Date().toISOString(); KID.open[evId] = true; render();
+  clearTimeout(KID.gT[evId]); KID.gT[evId] = setTimeout(() => kidGradeSave(evId), 1200);
+}
+async function kidGradeSave(evId){
+  const path = 'cham-bai/' + evId + '.json';
+  try{ if (!KID.gsha[evId]){ const g = await GH.kidGet(path); KID.gsha[evId] = g.sha; }
+    const {_sha, ...body} = KID.grades[evId]; KID.gsha[evId] = await GH.kidPut(path, body, KID.gsha[evId], 'App ba: cham bai ' + (body.subject || ''));
+    toast('Đã gửi kết quả chấm cho con'); }
+  catch(e){ if (e.status === 409 || e.status === 422){ delete KID.gsha[evId]; return kidGradeSave(evId); } toast('Chưa gửi được kết quả chấm – thử lại'); }
+}
 function kidPanelHTML(day){
   if (S.store !== 'gh') return '';
   const ev = KID.events.filter(e => (e.day || String(e.at).slice(0,10)) === day);
@@ -2732,6 +2765,7 @@ function kidPanelHTML(day){
     : e.type === 'progress' ? `📘 Nhập bài đã học – <b>${esc(e.subject)}</b> bài ${esc(e.lesson)}${e.pages ? ' tr.' + esc(e.pages) : ''}${e.part ? ' (' + esc(e.part) + ')' : ''}${e.note ? ' · ' + esc(e.note) : ''}`
     : e.type === 'newtask' ? `📝 Báo bài mới – <b>${esc(e.subject)}</b> ${esc(e.content)}${e.due ? ' · hạn ' + fmt(e.due) : ''}`
     : e.type === 'read' ? `📖 Đã đọc kiến thức – ${esc(e.text || '')}`
+    : e.type === 'quiz' ? quizLineHTML(e)
     : e.type === 'start' ? '▶️ Con bắt đầu học' : e.type === 'finish' ? `🏁 Con báo đã xong buổi học${e.text ? ' – ' + esc(e.text) : ''}`
     : e.type === 'note' ? `💬 Con nhắn ba: <b>${esc(e.text || '')}</b>` : esc(e.type);
   const first = ev.find(e => e.type === 'mark'), last = [...ev].reverse().find(e => e.type === 'mark');
@@ -2742,6 +2776,9 @@ function kidPanelHTML(day){
     <p class="small muted" style="margin-top:8px">Kế hoạch đã giao cho con: ${GH.st.pubAt ? 'lúc ' + GH.st.pubAt : 'đang chuẩn bị…'}${GH.st.pubErr ? ` · <b style="color:var(--p1)">${esc(GH.st.pubErr)}</b>` : ''} · Kiểm tra thao tác của con: ${GH.st.kidAt ? 'lúc ' + GH.st.kidAt : '…'} <button class="btn ghost" style="padding:2px 10px;font-size:12px" data-act="kidSync">🔄 Cập nhật ngay</button></p>
   </section>`;
 }
+// Nho khung "Xem bai lam" dang mo khi trang ve lai
+document.addEventListener('toggle', e => { const d = e.target; if (d && d.dataset && d.dataset.kidq) KID.open[d.dataset.kidq] = d.open; }, true);
+document.addEventListener('input', e => { const t = e.target; if (t && t.id && t.id.startsWith('kc_')) KID.cdraft[t.id.slice(3)] = t.value; }, true);
 
 /* ============ KET NOI ============ */
 async function loadKeys(){

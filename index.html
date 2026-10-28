@@ -203,6 +203,46 @@ textarea{min-height:70px;resize:vertical}
 .burst i{position:absolute;top:-20px;width:10px;height:14px;border-radius:3px;animation:fall 1.6s ease-in forwards}
 @keyframes fall{to{transform:translateY(105vh) rotate(540deg)}}
 
+
+/* ---- bai on dien tu ---- */
+.quizhead h2{font-size:26px;margin-top:2px}
+.qsec{margin-top:18px}
+.qst{font-size:20px;margin:0 0 10px}
+.qsec.withp{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.15fr);gap:16px;align-items:start}
+.qsec.withp .qst{grid-column:1/-1;margin:0}
+.passage{position:sticky;top:12px;background:var(--hi-soft);border:2px solid #F0D676;border-radius:var(--r-lg);padding:16px 18px;white-space:pre-wrap;font-size:15px;line-height:1.7;max-height:calc(100vh - 24px);overflow:auto}
+.qlist{display:grid;gap:12px}
+.qcard{background:var(--card);border:2px solid var(--line);border-radius:var(--r-md);padding:14px 16px}
+.qcard.ans{border-color:#B9AEF0}
+.qcard.good{border-color:#9ED9B9;background:linear-gradient(90deg,var(--ok-soft),var(--card) 30%)}
+.qcard.bad{border-color:#F2B1AB;background:linear-gradient(90deg,var(--no-soft),var(--card) 30%)}
+.qcard.wait{border-color:#F0D08A}
+.qlab{font-size:13px;color:var(--muted);display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.qp{margin:6px 0 10px;white-space:pre-wrap;font-weight:500}
+.qimg{display:block;max-width:220px;max-height:140px;border:2px solid var(--line);border-radius:10px;margin:0 0 10px;background:#fff}
+.opts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.opt{display:flex;gap:10px;align-items:flex-start;text-align:left;border:2px solid var(--line);background:var(--card);border-radius:12px;padding:9px 12px;font-size:14px}
+.opt b{font-family:var(--f-disp);font-size:16px;width:22px;height:22px;border-radius:50%;background:var(--grid);display:grid;place-items:center;flex:none;line-height:1}
+.opt[aria-pressed="true"]{border-color:var(--violet);background:var(--violet-soft);color:var(--violet);font-weight:600}
+.opt[aria-pressed="true"] b{background:var(--violet);color:#fff}
+.opt:disabled{cursor:default;opacity:.75}
+.opt.sm{padding:5px 12px;font-weight:600;justify-content:center}
+.tfl{display:grid;gap:6px}
+.tfrow{display:flex;gap:12px;align-items:center;justify-content:space-between;padding:6px 0;border-top:1px dashed var(--line)}
+.tfrow:first-child{border-top:0}
+.tfb{display:flex;gap:6px;flex:none;flex-wrap:wrap;justify-content:flex-end}
+.yours,.model{margin-top:8px;padding:8px 10px;border-radius:10px;font-size:14px;white-space:pre-wrap}
+.yours{background:#F3F5FB}
+.model{background:var(--ok-soft)}
+.submitbar{position:sticky;bottom:12px;margin-top:18px;box-shadow:0 6px 20px rgba(31,42,77,.12);z-index:5}
+.score{display:flex;gap:20px;align-items:center;flex-wrap:wrap}
+.ring{--p:0;width:120px;height:120px;border-radius:50%;background:conic-gradient(var(--ok) calc(var(--p)*1%),var(--grid) 0);display:grid;place-content:center;text-align:center;position:relative}
+.ring:before{content:"";position:absolute;inset:12px;border-radius:50%;background:var(--card)}
+.ring b,.ring span{position:relative}
+.ring b{font:800 28px/1 var(--f-disp)}
+.ring span{font-size:12px;color:var(--muted)}
+@media (max-width:900px){ .qsec.withp{grid-template-columns:1fr} .passage{position:static;max-height:none} }
+@media (max-width:560px){ .opts{grid-template-columns:1fr} .tfrow{flex-direction:column;align-items:flex-start} }
 @media (max-width:1080px){ .cols{grid-template-columns:1fr} .stats{grid-template-columns:repeat(2,1fr)} }
 @media (max-width:760px){
   .shell{grid-template-columns:1fr}
@@ -266,7 +306,7 @@ const OWL = (sz = 64) => `<svg class="owl" width="${sz}" height="${sz}" viewBox=
 
 /* ============ TRANG THAI ============ */
 const S = {
-  cfg: ls.get(CFG_KEY, {}),
+  cfg: (c => { if (c && (!c.name || c.name === 'Minh')){ c.name = 'Hạ An'; ls.set(CFG_KEY, c); } return c; })(ls.get(CFG_KEY, {})),
   tab: ['home','know','add','tkb','award','log'].includes(location.hash.slice(1)) ? location.hash.slice(1) : 'home',
   view: 'today',          // today | tomorrow
   plans: {},              // day -> plan
@@ -274,11 +314,12 @@ const S = {
   remote: {},             // file day -> {sha, events}
   queue: ls.get(QUEUE_KEY, []),   // su kien chua gui
   loaded: false, loadErr: '', syncState: 'ok', lastSync: '',
+  ans: {}, quizzes: {}, grades: {}, qOpen: null, qMode: '', qConfirm: false,
   quiz: {}, reveal: {}, toast: '', prog: {}, nt: {subject: '', content: '', source: 'V', due: ''}, note: '', setupErr: '', busy: false
 };
 // Ban tam de mo app khi mat mang
-(() => { const c = ls.get(CACHE_KEY, null); if (c){ S.plans = c.plans || {}; S.common = c.common || null; S.remote = c.remote || {}; } })();
-const saveCache = () => { const keep = {}; Object.keys(S.plans).sort().slice(-12).forEach(k => keep[k] = S.plans[k]); ls.set(CACHE_KEY, {plans: keep, common: S.common, remote: S.remote}); };
+(() => { const c = ls.get(CACHE_KEY, null); if (c){ S.plans = c.plans || {}; S.common = c.common || null; S.remote = c.remote || {}; S.quizzes = c.quizzes || {}; S.grades = c.grades || {}; } })();
+const saveCache = () => { const keep = {}; Object.keys(S.plans).sort().slice(-12).forEach(k => keep[k] = S.plans[k]); ls.set(CACHE_KEY, {plans: keep, common: S.common, remote: S.remote, quizzes: S.quizzes, grades: S.grades}); };
 
 /* ============ GITHUB ============ */
 const b64 = s => { const b = new TextEncoder().encode(s); let o = ''; for (let i = 0; i < b.length; i += 0x8000) o += String.fromCharCode.apply(null, b.subarray(i, i + 0x8000)); return btoa(o); };
@@ -299,7 +340,9 @@ async function listDir(dir){ return (await api(dir, {allow404: true})) || []; }
 /* ============ NAP DU LIEU ============ */
 async function loadAll(){
   const T = today(), days = [T, addDays(T, 1)];
-  const [kh, cg, common] = await Promise.all([listDir('ke-hoach'), listDir('con-ghi'), getJSON('chung/chung.json')]);
+  const [kh, cg, common, bo, cb] = await Promise.all([listDir('ke-hoach'), listDir('con-ghi'), getJSON('chung/chung.json'), listDir('bai-on'), listDir('cham-bai')]);
+  await Promise.all(bo.filter(f => /\.json$/.test(f.name)).map(async f => { const id = f.name.replace(/\.json$/, ''); if (S.quizzes[id] && S.quizzes[id]._sha === f.sha) return; const g = await getJSON('bai-on/' + f.name); if (g.obj){ g.obj._sha = g.sha; S.quizzes[id] = g.obj; } }));
+  await Promise.all(cb.filter(f => /\.json$/.test(f.name)).map(async f => { const id = f.name.replace(/\.json$/, ''); if (S.grades[id] && S.grades[id]._sha === f.sha) return; const g = await getJSON('cham-bai/' + f.name); if (g.obj){ g.obj._sha = g.sha; S.grades[id] = g.obj; } }));
   if (common.obj) S.common = common.obj;
   // ke hoach: hom nay, ngay mai va cac ngay trong tuan (de tinh tien do)
   const mon = addDays(T, -((dow(T) + 6) % 7)), want = new Set([...days]);
@@ -413,6 +456,135 @@ function periodsOf(d){
 const pName = p => p.l || p.s;
 const nextSchool = d => { let x = addDays(d, 1); for (let i = 0; i < 10 && (dow(x) === 0 || (S.common && S.common.offDays && S.common.offDays[x])); i++) x = addDays(x, 1); return x; };
 
+
+/* ============ BAI ON DIEN TU (ba 28/10) ============
+   bai-on/<keyId>.json: cau hoi; dap an duoc che trong truong "sec" (giai ma khi nop bai).
+   Nop bai -> su kien 'quiz' (kem chi tiet) + tu danh dau nhiem vu. Cau tu luan: may do y chinh, ba cham sau (cham-bai/<idSuKien>.json). */
+const XK = 'hoc-tap-6a14';
+function unhide(s){ const b = Uint8Array.from(atob(s), c => c.charCodeAt(0)); const k = new TextEncoder().encode(XK); return JSON.parse(new TextDecoder().decode(b.map((c, i) => c ^ k[i % k.length]))); }
+const noAcc = s => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/đ/g, 'd').replace(/Đ/g, 'D').toLowerCase().replace(/\s+/g, ' ');
+const qAll = qz => qz.sections.flatMap(s => s.qs);
+const draftKey = id => 'goc-quiz-' + id;
+function quizDraft(id){ if (!S.ans[id]) S.ans[id] = ls.get(draftKey(id), null) || {a: {}, start: Date.now(), locked: []}; return S.ans[id]; }
+const saveDraft = id => ls.set(draftKey(id), S.ans[id]);
+function answered(q, v){
+  if (q.type === 'mcq') return !!v;
+  if (q.type === 'text') return !!String(v || '').trim();
+  const n = q.type === 'tf' ? q.items.length : q.items.length;
+  return !!v && Object.keys(v).filter(k => v[k]).length >= n;
+}
+function gradeQuiz(qz, A){
+  const sec = unhide(qz.sec), per = {}; let got = 0, max = 0, textN = 0;
+  qAll(qz).forEach(q => {
+    const v = A[q.id], ans = sec.ans[q.id];
+    if (q.type === 'mcq'){ const ok = (Array.isArray(ans) ? ans : [ans]).includes(v); per[q.id] = {ok, got: ok ? 1 : 0, max: 1}; }
+    else if (q.type === 'tf'){ let g = 0; q.items.forEach(it => { if (v && v[it.k] === ans[it.k]) g++; }); per[q.id] = {ok: g === q.items.length, got: g, max: q.items.length}; }
+    else if (q.type === 'classify'){ let g = 0; q.items.forEach((it, i) => { if (v && v[i] === ans[it]) g++; }); per[q.id] = {ok: g === q.items.length, got: g, max: q.items.length}; }
+    else { textN++; const t = noAcc(v); const hits = ans.kw.filter(gp => gp.some(w => t.includes(w))).length; per[q.id] = {text: true, hits, need: ans.need, enough: hits >= ans.need, empty: !t.trim()}; return; }
+    got += per[q.id].got; max += per[q.id].max;
+  });
+  return {got, max, textN, per, sec};
+}
+function quizAttempts(id){ return allEvents().filter(e => e.type === 'quiz' && e.quizId === id); }
+const quizFor = t => t && t.snap && t.snap.keyId && S.quizzes[t.snap.keyId] ? S.quizzes[t.snap.keyId] : null;
+function quizBtnHTML(t, day){
+  const qz = quizFor(t); if (!qz) return '';
+  const at = quizAttempts(qz.id), last = at[at.length - 1];
+  return `<div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+    <button class="btn ${last ? 'line' : 'hi'}" data-act="openQuiz" data-q="${esc(qz.id)}" data-task="${esc(t.id)}" data-day="${day}">${last ? '📊 Xem kết quả / làm lại' : '✍️ Làm bài trên app'}</button>
+    ${last ? `<span class="small"><b>${last.got}/${last.max}</b> ý trắc nghiệm đúng${last.textN ? ` · ${last.textN} câu tự luận` : ''} · nộp ${hm(last.at)}${at.length > 1 ? ` (lần ${at.length})` : ''}</span>` : `<span class="small muted">${qAll(qz).length} câu · tự chấm khi nộp</span>`}</div>`;
+}
+const pct = (a, b) => b ? Math.round(a * 100 / b) : 0;
+function viewQuiz(evs){
+  const o = S.qOpen, qz = o && S.quizzes[o.id];
+  if (!qz) return `<div class="panel" style="margin-top:20px"><p>Không tìm thấy bài ôn.</p><button class="btn" data-tab="home">Về Hôm nay</button></div>`;
+  const at = quizAttempts(qz.id), last = at[at.length - 1];
+  const mode = S.qMode === 'do' || !last ? 'do' : 'result';
+  const D = quizDraft(qz.id), qs = qAll(qz);
+  const done = qs.filter(q => answered(q, D.a[q.id])).length;
+  const head = `<div class="panel quizhead" style="margin-top:20px;${sjStyle(qz.subject)}">
+      <button class="btn line" data-tab="home" style="float:right">← Về Hôm nay</button>
+      <div class="small" style="font-weight:700">${ic(qz.subject)} ${esc(qz.subject)} · ${qs.length} câu</div>
+      <h2>${esc(qz.title)}</h2><p class="small" style="margin:6px 0 0">${esc(qz.intro)}</p>
+      ${mode === 'do' ? `<div class="bar" style="margin-top:10px;background:rgba(255,255,255,.7)"><i style="width:${pct(done, qs.length)}%"></i></div><div class="small" style="margin-top:4px">Đã làm ${done}/${qs.length} câu${D.locked.length ? ` · làm lại ${qs.length - D.locked.length} câu sai` : ''}</div>` : ''}
+    </div>`;
+  if (mode === 'result') return head + quizResultHTML(qz, last, at.length);
+  const secs = qz.sections.map(s => `<section class="qsec ${s.passage ? 'withp' : ''}"><h3 class="qst">${esc(s.title)}</h3>
+      ${s.passage ? `<div class="passage">${esc(s.passage)}</div>` : ''}
+      <div class="qlist">${s.qs.map(q => qHTML(q, D)).join('')}</div></section>`).join('');
+  const left = qs.length - done;
+  return head + secs + `<div class="panel submitbar">
+      ${S.qConfirm ? `<p class="err" style="margin-top:0">Còn ${left} câu chưa làm. Con muốn làm tiếp hay nộp luôn?</p><div class="actions"><button class="btn line" data-act="qBack">Làm tiếp</button><button class="btn" data-act="qSubmit" data-force="1">📤 Vẫn nộp bài</button></div>`
+        : `<div class="actions" style="margin-top:0;align-items:center"><button class="btn" data-act="qSubmit">📤 Nộp bài và chấm</button><span class="small muted">Đã làm ${done}/${qs.length} câu · bài được lưu tạm trên máy, tắt máy vẫn còn.</span></div>`}
+    </div>`;
+}
+function qHTML(q, D){
+  const v = D.a[q.id], lock = D.locked.includes(q.id);
+  const lab = `<div class="qlab"><b>${esc(q.label)}</b>${lock ? ' <span class="chip" style="background:var(--ok-soft);color:var(--ok)">đúng rồi ✓</span>' : ''}</div>`;
+  const img = q.img ? `<img class="qimg" src="${q.img}" alt="Hình minh hoạ ${esc(q.label)}">` : '';
+  const note = q.note ? `<div class="small muted" style="margin-top:4px">${esc(q.note)}</div>` : '';
+  let body = '';
+  if (q.type === 'mcq') body = `<div class="opts">${q.opts.map(op => `<button class="opt" aria-pressed="${v === op.k}" ${lock ? 'disabled' : ''} data-act="pick" data-q="${esc(q.id)}" data-v="${op.k}"><b>${op.k}</b><span>${esc(op.t)}</span></button>`).join('')}</div>`;
+  else if (q.type === 'tf') body = `<div class="tfl">${q.items.map(it => `<div class="tfrow"><span>${esc(it.k)}) ${esc(it.t)}</span><span class="tfb">${['Đ','S'].map(x => `<button class="opt sm" aria-pressed="${!!v && v[it.k] === x}" ${lock ? 'disabled' : ''} data-act="tf" data-q="${esc(q.id)}" data-i="${it.k}" data-v="${x}">${x === 'Đ' ? 'Đúng' : 'Sai'}</button>`).join('')}</span></div>`).join('')}</div>`;
+  else if (q.type === 'classify') body = `<div class="tfl">${q.items.map((it, i) => `<div class="tfrow"><span>${esc(it)}</span><span class="tfb">${q.choices.map(x => `<button class="opt sm" aria-pressed="${!!v && v[i] === x}" ${lock ? 'disabled' : ''} data-act="cls" data-q="${esc(q.id)}" data-i="${i}" data-v="${esc(x)}">${esc(x)}</button>`).join('')}</span></div>`).join('')}</div>`;
+  else body = `<textarea rows="${q.rows || 3}" data-qtext="${esc(q.id)}" ${lock ? 'disabled' : ''} placeholder="Con viết câu trả lời ở đây…">${esc(v || '')}</textarea>`;
+  return `<div class="qcard ${answered(q, v) ? 'ans' : ''}">${lab}<div class="qp">${esc(q.prompt)}</div>${img}${body}${note}</div>`;
+}
+function quizResultHTML(qz, ev, n){
+  const G = S.grades[ev.id] || {}, gs = G.grades || {};
+  const det = {}; (ev.detail || []).forEach(d => det[d.qid] = d);
+  const r = pct(ev.got, ev.max), face = r >= 80 ? '🌟' : r >= 50 ? '💪' : '📚';
+  const tq = (ev.texts || []);
+  const tDone = tq.filter(t => gs[t.qid]).length;
+  return `<div class="panel"><div class="score">
+      <div class="ring" style="--p:${r}"><b>${ev.got}/${ev.max}</b><span>ý đúng</span></div>
+      <div><h2>${face} ${r >= 80 ? 'Giỏi lắm!' : r >= 50 ? 'Khá rồi, sửa nốt câu sai nhé!' : 'Đọc lại kiến thức rồi làm lại câu sai nhé!'}</h2>
+        <p class="small muted">Nộp lúc ${hm(ev.at)}${n > 1 ? ` · lần ${n}` : ''}${ev.min ? ` · làm trong ${ev.min} phút` : ''}</p>
+        ${tq.length ? `<p class="small">${tDone ? `Ba đã chấm ${tDone}/${tq.length} câu tự luận: <b>${tq.filter(t => gs[t.qid] === 'dat').length} đạt</b>.` : `${tq.length} câu tự luận: máy đã dò ý chính, <b>ba sẽ chấm tối nay</b>.`}</p>` : ''}
+        ${G.comment ? `<p class="small"><b>Ba nhận xét:</b> ${esc(G.comment)}</p>` : ''}
+      </div></div>
+    <div class="actions">${(ev.wrong || []).length ? `<button class="btn" data-act="qRetry">🔁 Làm lại ${ev.wrong.length} câu sai</button>` : '<span class="ok-note">Không còn câu trắc nghiệm nào sai 🎉</span>'}<button class="btn line" data-act="qAgain">↺ Làm lại cả bài</button><button class="btn soft" data-tab="know">💡 Xem lại kiến thức</button></div></div>
+    ${qz.sections.map(s => `<section class="qsec"><h3 class="qst">${esc(s.title)}</h3><div class="qlist">${s.qs.map(q => {
+      const d = det[q.id], tx = tq.find(t => t.qid === q.id);
+      if (q.type === 'text'){ const g = gs[q.id];
+        return `<div class="qcard ${g === 'dat' ? 'good' : g === 'chua' ? 'bad' : 'wait'}"><div class="qlab"><b>${esc(q.label)}</b> ${g === 'dat' ? '<span class="chip" style="background:var(--ok);color:#fff">Ba chấm: Đạt</span>' : g === 'chua' ? '<span class="chip" style="background:var(--no);color:#fff">Ba chấm: Chưa đạt</span>' : `<span class="chip" style="background:var(--mid-soft);color:var(--mid)">Máy dò được ${tx ? tx.hits : 0}/${tx ? tx.need : '?'} ý chính · chờ ba chấm</span>`}</div>
+          <div class="qp">${esc(q.prompt)}</div><div class="yours"><b>Con viết:</b> ${esc(tx ? tx.text : '') || '<i>(bỏ trống)</i>'}</div>
+          <div class="model"><b>Gợi ý đáp án:</b> ${esc(tx ? tx.model : '')}</div></div>`; }
+      const ok = !d;
+      return `<div class="qcard ${ok ? 'good' : 'bad'}"><div class="qlab"><b>${esc(q.label)}</b> ${ok ? '<span class="chip" style="background:var(--ok-soft);color:var(--ok)">✓ Đúng</span>' : `<span class="chip" style="background:var(--no-soft);color:var(--no)">✗ ${d.got}/${d.max}</span>`}</div>
+        <div class="qp">${esc(q.prompt)}</div>
+        ${ok ? '' : `<div class="yours"><b>Con chọn:</b> ${esc(d.yours || '(bỏ trống)')}</div><div class="model"><b>Đáp án:</b> ${esc(d.right)}${d.why ? `<br><span class="small">${esc(d.why)}</span>` : ''}</div>`}</div>`;
+    }).join('')}</div></section>`).join('')}`;
+}
+function submitQuiz(force){
+  const o = S.qOpen, qz = S.quizzes[o.id], D = quizDraft(qz.id), qs = qAll(qz);
+  const left = qs.filter(q => !answered(q, D.a[q.id])).length;
+  if (left && !force){ S.qConfirm = true; render(); return; }
+  S.qConfirm = false;
+  const R = gradeQuiz(qz, D.a), sec = R.sec;
+  const show = (q, v) => q.type === 'mcq' ? (v ? v + '. ' + ((q.opts.find(x => x.k === v) || {}).t || '') : '')
+    : q.type === 'tf' ? q.items.map(it => `${it.k}) ${v && v[it.k] ? v[it.k] : '?'}`).join('  ')
+    : q.items.map((it, i) => `${q.type === 'classify' && it.length > 30 ? it.slice(0, 2) : it}: ${v && v[i] ? v[i] : '?'}`).join(' · ');
+  const right = q => { const a = sec.ans[q.id];
+    if (q.type === 'mcq') return (Array.isArray(a) ? a : [a]).map(k => k + '. ' + ((q.opts.find(x => x.k === k) || {}).t || '')).join(' / ');
+    if (q.type === 'tf') return q.items.map(it => `${it.k}) ${a[it.k]}`).join('  ');
+    return q.items.map(it => `${it.length > 30 ? it.slice(0, 2) : it}: ${a[it]}`).join(' · '); };
+  const detail = [], texts = [], wrong = [];
+  qs.forEach(q => { const p = R.per[q.id];
+    if (p.text){ texts.push({qid: q.id, label: q.label, prompt: q.prompt, text: String(D.a[q.id] || '').trim(), hits: p.hits, need: p.need, model: sec.model[q.id]}); return; }
+    if (!p.ok){ wrong.push(q.id); detail.push({qid: q.id, label: q.label, got: p.got, max: p.max, yours: show(q, D.a[q.id]), right: right(q), why: sec.why[q.id] || ''}); } });
+  const mins = Math.max(1, Math.round((Date.now() - (D.start || Date.now())) / 60000));
+  const p = S.plans[o.day], t = planTasks(p).find(x => x.id === o.taskId);
+  const ev = addEvent({type: 'quiz', quizId: qz.id, taskId: o.taskId, planDay: o.day, subject: qz.subject, title: qz.title, attempt: quizAttempts(qz.id).length + 1,
+    got: R.got, max: R.max, textN: R.textN, wrong, detail, texts, min: mins, answers: D.a});
+  // tu danh dau nhiem vu theo ket qua trac nghiem: >= 80% xong du · >= 50% chua chac · con lai chua lam duoc
+  if (t){ const r = R.max ? R.got / R.max : 1, mark = r >= 0.8 ? 'ok' : r >= 0.5 ? 'unsure' : 'no';
+    if (markOf(t, allEvents()).mark !== mark) addEvent({type: 'mark', taskId: t.id, mark, planDay: o.day, subject: t.subject, text: t.text, snap: t.snap, auto: 'quiz'}); }
+  delete S.ans[qz.id]; try{ localStorage.removeItem(draftKey(qz.id)); }catch(e){}
+  S.qMode = 'result'; render(); window.scrollTo(0, 0);
+  if (R.max && R.got === R.max) celebrate();
+}
+
 /* ============ VE GIAO DIEN ============ */
 let rq = 0; function render(){ if (rq) return; rq = requestAnimationFrame(() => { rq = 0; renderNow(); }); }
 function toast(t){ S.toast = t; render(); clearTimeout(toast.t); toast.t = setTimeout(() => { S.toast = ''; render(); }, 2600); }
@@ -422,18 +594,18 @@ function celebrate(){
   for (let i = 0; i < 46; i++){ const x = document.createElement('i'); x.style.left = Math.random()*100 + 'vw'; x.style.background = col[i % col.length]; x.style.animationDelay = Math.random()*0.5 + 's'; b.appendChild(x); }
   document.body.appendChild(b); setTimeout(() => b.remove(), 2400);
 }
-const NAV = [['home','🏠','Hôm nay'],['know','💡','Kiến thức'],['add','✏️','Nhập bài'],['tkb','🗓️','Lịch học'],['award','🏆','Thành tích'],['log','🕒','Nhật ký']];
+const NAV = [['add','✏️','Nhập bài'],['home','🏠','Hôm nay'],['know','💡','Kiến thức'],['tkb','🗓️','Lịch học'],['award','🏆','Thành tích'],['log','🕒','Nhật ký']];
 
 function renderNow(){
   const app = document.getElementById('app');
   if (!S.cfg.token){ app.innerHTML = viewSetup(); return; }
-  const evs = allEvents(), name = S.cfg.name || 'bạn';
-  const views = {home: viewHome, know: viewKnow, add: viewAdd, tkb: viewTkb, award: viewAward, log: viewLog};
+  const evs = allEvents(), name = S.cfg.name || 'Hạ An';
+  const views = {home: viewHome, know: viewKnow, add: viewAdd, tkb: viewTkb, award: viewAward, log: viewLog, quiz: viewQuiz};
   const syncTxt = S.queue.length ? (S.syncState === 'err' ? `<span class="dot err"></span>Chưa gửi được ${S.queue.length} thao tác – app sẽ tự gửi lại` : '<span class="dot wait"></span>Đang gửi cho ba…') : `<span class="dot"></span>Đã đồng bộ ${S.lastSync || ''}`;
   app.innerHTML = `<div class="shell">
     <aside class="side">
       <div class="brand">${OWL(44)}<b>Góc học tập<br>6A14</b></div>
-      <nav class="nav" aria-label="Mục">${NAV.map(([k, i, n]) => `<button data-tab="${k}" aria-current="${S.tab === k ? 'page' : 'false'}"><span class="ic">${i}</span>${n}</button>`).join('')}</nav>
+      <nav class="nav" aria-label="Mục">${NAV.map(([k, i, n]) => `<button data-tab="${k}" aria-current="${S.tab === k || (S.tab === 'quiz' && k === 'home') ? 'page' : 'false'}"><span class="ic">${i}</span>${n}</button>`).join('')}</nav>
       <div class="owlbox">Tự làm trước, đánh dấu chỗ khó, rồi mới hỏi ba nhé!</div>
     </aside>
     <main class="main">
@@ -452,7 +624,7 @@ function viewSetup(){
   return `<div class="setup">${OWL(72)}<h1>Góc học tập 6A14</h1>
     <p class="muted">Lần đầu mở app trên máy này: ba nhập giúp con 1 lần là xong.</p>
     <div class="form">
-      <label class="f">Tên con muốn app gọi <input type="text" id="sName" value="${esc(c.name || '')}" placeholder="Ví dụ: Minh"></label>
+      <label class="f">Tên con muốn app gọi <input type="text" id="sName" value="${esc(c.name || 'Hạ An')}" placeholder="Hạ An"></label>
       <label class="f">Tài khoản GitHub của ba <input type="text" id="sOwner" value="${esc(c.owner || '84bcngo')}"></label>
       <label class="f">Mã truy cập của con (may-con) <input type="password" id="sToken" placeholder="github_pat_..."></label>
       ${S.setupErr ? `<p class="err">${esc(S.setupErr)}</p>` : ''}
@@ -531,11 +703,11 @@ function planHTML(p, day, evs){
 }
 const todo = t => { const n = String((t.snap && t.snap.note) || '').split('||')[0].trim(); return /^Việc cần làm:/.test(n) ? n : ''; };
 function taskHTML(t, g, evs, day){
-  const m = markOf(t, evs);
-  const who = m.mark ? (m.by === 'ba' ? 'Ba đã xem và đổi dấu' : m.at ? 'Con đánh dấu lúc ' + hm(m.at) + (m.pending ? ' · chờ gửi' : '') : '') : '';
+  const m = markOf(t, evs), autoM = [...evs].reverse().find(e => e.type === 'mark' && e.taskId === t.id);
+  const who = m.mark ? (m.by === 'ba' ? 'Ba đã xem và đổi dấu' : m.at ? (autoM && autoM.auto === 'quiz' && autoM.at === m.at ? 'Máy chấm và đánh dấu lúc ' : 'Con đánh dấu lúc ') + hm(m.at) + (m.pending ? ' · chờ gửi' : '') : '') : '';
   return `<div class="task ${m.mark ? 'm-' + m.mark : ''}">
     <div class="txt"><span class="src">${esc(t.src)}</span><span class="body">${esc(t.text)}</span>${t.tag ? `<span class="debt">${esc(t.tag)}</span>` : ''}${t.fromKid ? ' <span class="src">con nhập</span>' : ''}${todo(t) ? `<div class="when" style="color:var(--ink)">📌 ${esc(todo(t))}</div>` : ''}
-      ${who ? `<div class="when">${esc(who)}</div>` : ''}</div>
+      ${who ? `<div class="when">${esc(who)}</div>` : ''}${quizBtnHTML(t, day)}</div>
     <div class="stamps" role="group" aria-label="Đánh dấu">${Object.entries(MARKS).map(([k, v]) => `<button class="stamp ${v.c}" title="${v.n}" aria-label="${v.n}" aria-pressed="${m.mark === k}" data-act="mark" data-id="${esc(t.id)}" data-day="${day}" data-v="${k}">${MARK_SVG[k]}</button>`).join('')}</div>
   </div>`;
 }
@@ -624,6 +796,7 @@ function viewLog(evs){
     : e.type === 'progress' ? `📘 Bài đã học – <b>${esc(e.subject)}</b> bài ${esc(e.lesson)}${e.pages ? ' tr.' + esc(e.pages) : ''}`
     : e.type === 'newtask' ? `📝 Bài mới – <b>${esc(e.subject)}</b> ${esc(e.content)}`
     : e.type === 'read' ? `📖 Đọc xong kiến thức – ${esc(e.text || '')}`
+    : e.type === 'quiz' ? `📤 Nộp bài ôn <b>${esc(e.subject)}</b>: ${e.got}/${e.max} ý đúng${e.textN ? ' · ' + e.textN + ' câu tự luận' : ''} (lần ${e.attempt})`
     : e.type === 'start' ? '▶️ Bắt đầu học' : e.type === 'finish' ? '🏁 Báo ba: con xong buổi chiều' : e.type === 'note' ? `💬 Nhắn ba: ${esc(e.text)}` : esc(e.type);
   return `<div class="panel" style="margin-top:20px"><div class="ph"><h2>Nhật ký thao tác</h2><span class="small muted">Ba xem được các dòng này kèm giờ</span></div>
     ${days.length ? days.map(d => `<h3 style="font-size:18px;margin:14px 0 4px">${d === T ? 'Hôm nay' : DAYS[dow(d)]} ${fmt(d)}</h3><ul class="log">${evs.filter(e => e.day === d).reverse().map(e => `<li><time>${hm(e.at)}</time><span>${line(e)}${e._pending ? '<span class="pend">chờ gửi</span>' : ''}</span></li>`).join('')}</ul>`).join('') : '<p class="muted">Chưa có thao tác nào.</p>'}
@@ -637,11 +810,12 @@ app.addEventListener('input', e => {
   if (d.prog){ S.prog[d.prog] = S.prog[d.prog] || {}; S.prog[d.prog][d.k] = e.target.value; }
   if (d.nt) S.nt[d.nt] = e.target.value;
   if (e.target.id === 'noteTxt') S.note = e.target.value;
+  if (d.qtext && S.qOpen){ const D = quizDraft(S.qOpen.id); D.a[d.qtext] = e.target.value; saveDraft(S.qOpen.id); e.target.closest('.qcard').classList.toggle('ans', !!e.target.value.trim()); }
 });
 app.addEventListener('click', async e => {
   const el = e.target.closest('[data-tab],[data-act]'); if (!el) return;
   const d = el.dataset;
-  if (d.tab){ S.tab = d.tab; history.replaceState(null, '', '#' + d.tab); render(); window.scrollTo(0, 0); return; }
+  if (d.tab){ S.qConfirm = false; S.tab = d.tab; history.replaceState(null, '', '#' + d.tab); render(); window.scrollTo(0, 0); return; }
   switch (d.act){
     case 'setup': {
       const name = document.getElementById('sName').value.trim(), owner = document.getElementById('sOwner').value.trim(), token = document.getElementById('sToken').value.trim();
@@ -652,6 +826,15 @@ app.addEventListener('click', async e => {
       catch(x){ S.cfg = old; S.setupErr = x.status === 401 ? 'Mã truy cập không đúng.' : x.status === 404 ? 'Không mở được kho ' + owner + '/hoc-tap-6a14 – kiểm tra tên tài khoản và quyền của mã.' : 'Chưa kết nối được: ' + (x.detail || x.message); }
       S.busy = false; render(); break; }
     case 'refresh': await refresh(); break;
+    case 'openQuiz': S.qOpen = {id: d.q, taskId: d.task, day: d.day}; S.qMode = ''; S.qConfirm = false; S.tab = 'quiz'; render(); window.scrollTo(0, 0); break;
+    case 'pick': { const D = quizDraft(S.qOpen.id); D.a[d.q] = d.v; saveDraft(S.qOpen.id); render(); break; }
+    case 'tf': case 'cls': { const D = quizDraft(S.qOpen.id); D.a[d.q] = {...(D.a[d.q] || {}), [d.i]: d.v}; saveDraft(S.qOpen.id); render(); break; }
+    case 'qSubmit': submitQuiz(!!d.force); break;
+    case 'qBack': S.qConfirm = false; render(); break;
+    case 'qRetry': { const at = quizAttempts(S.qOpen.id), last = at[at.length - 1]; const qz = S.quizzes[S.qOpen.id];
+      const a = {...(last.answers || {})}; (last.wrong || []).forEach(id => delete a[id]);
+      S.ans[qz.id] = {a, start: Date.now(), locked: qAll(qz).map(q => q.id).filter(id => !(last.wrong || []).includes(id))}; saveDraft(qz.id); S.qMode = 'do'; render(); window.scrollTo(0, 0); break; }
+    case 'qAgain': { S.ans[S.qOpen.id] = {a: {}, start: Date.now(), locked: []}; saveDraft(S.qOpen.id); S.qMode = 'do'; render(); window.scrollTo(0, 0); break; }
     case 'view': S.view = d.v; render(); break;
     case 'mark': {
       const p = S.plans[d.day], t = planTasks(p).find(x => x.id === d.id); if (!t) return;
