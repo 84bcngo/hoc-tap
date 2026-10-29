@@ -2623,7 +2623,7 @@ const STORE = () => S.store === 'gh' ? GH : LOCAL;
 
 /* ============ GIAO KE HOACH CHO CON (app hoc sinh) ============ */
 let SP = null;
-function spSnap(t){ const o = {}; ['subject','content','lessonNo','book','source','due','assigned','part','keyId','prio','planDay','checkDue','backlog','min','exam','note'].forEach(k => { if (t[k] !== undefined && t[k] !== '' && t[k] !== null) o[k] = t[k]; }); return o; }
+function spSnap(t){ const o = {}; ['subject','content','lessonNo','book','source','due','assigned','part','keyId','prio','planDay','checkDue','backlog','min','exam','note','noQuiz'].forEach(k => { if (t[k] !== undefined && t[k] !== '' && t[k] !== null) o[k] = t[k]; }); return o; }
 // Ke hoach co cau truc cho app hoc sinh – dung lai dung logic tin nhan Zalo (childMessage0)
 function studentPlan(day){
   SP = {_gs: [], head: [], knowledge: [], groups: [], memo: false, tail: []};

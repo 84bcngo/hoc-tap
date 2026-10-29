@@ -501,7 +501,7 @@ function gradeQuiz(qz, A){
   return {got, max, textN, per, sec};
 }
 function quizAttempts(id){ return allEvents().filter(e => e.type === 'quiz' && e.quizId === id); }
-const quizFor = t => t && t.snap && t.snap.keyId && S.quizzes[t.snap.keyId] ? S.quizzes[t.snap.keyId] : null;
+const quizFor = t => t && t.snap && t.snap.keyId && !t.snap.noQuiz && S.quizzes[t.snap.keyId] ? S.quizzes[t.snap.keyId] : null;   // noQuiz: phan lam vao vo (vd Toan tu luan)
 function quizBtnHTML(t, day){
   const qz = quizFor(t); if (!qz) return '';
   const at = quizAttempts(qz.id), last = at[at.length - 1];
