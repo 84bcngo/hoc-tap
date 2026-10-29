@@ -2634,7 +2634,9 @@ function studentPlan(day){
   sp.groups.forEach(g => g.tasks.forEach(t => { const kid = t.snap.keyId, k = kid && S.keys[kid]; if (!k || have.has('key:' + kid) || !(k.knowledge || []).length) return; have.add('key:' + kid);
     sp.knowledge.push({id: 'key:' + kid, subject: t.snap.subject, label: t.snap.subject, title: u(k.title || ''), pages: k.pages || '', upTo: 0, relearn: [],
       lines: k.knowledge.map((x, i) => ({x: u(x), star: !!(k.knowMust || [])[i]})), mistakes: (k.mistakes || []).map(u)}); }));
-  return {day, title: msgPlain(msg.split('\n')[0]), head: sp.head.filter(x => x.trim()), knowledge: sp.knowledge, groups: sp.groups, memo: sp.memo, tail: sp.tail,
+  // Dong tieu diem chung theo loai ngay (vd 'P1: Toan ... nop T6') co the khong con dung khi ba doi bai -> thay bang danh sach mon chieu nay
+  const focus = x => /^🎯/.test(x) && !/^🎯 Mai/.test(x) ? (sp.groups.length ? '🎯 Chiều nay: ' + sp.groups.map(g => g.subject).join(', ') + '.' : '') : x;
+  return {day, title: msgPlain(msg.split('\n')[0]), head: sp.head.map(focus).filter(x => x.trim()), knowledge: sp.knowledge, groups: sp.groups, memo: sp.memo, tail: sp.tail,
     english: !!(PROFILE[dow(day)] || {}).english, message: msgPlain(msg)};
 }
 function kidCommon(){
@@ -2714,7 +2716,13 @@ async function applyKid(ev){
     return;
   }
   if (ev.type === 'progress'){
-    const sj = ev.subject, ls = parseLessons(sj, String(ev.lesson || '').trim()); if (!sj || !ls.length) return;
+    const sj = ev.subject; if (!sj) return;
+    // Tinh huong tiet hoc (ba 29/10): 'off' = duoc nghi tiet -> ghi tiet bi huy (giong nut 'Khong hoc hom nay'); on thi / kiem tra / chua bai -> khong co bai moi
+    const cx = cancelledOn(day);
+    if (ev.mode === 'off'){ if (!cx.includes(sj)) await metaMerge({cancelled: {[day]: cx.concat([sj])}}); return; }
+    if (cx.includes(sj)) await metaMerge({cancelled: {[day]: cx.filter(x => x !== sj)}});   // con doi lai: co hoc
+    if (ev.mode && ev.mode !== 'new') return;
+    const ls = parseLessons(sj, String(ev.lesson || '').trim()); if (!ls.length) return;
     const id = day + '_' + (SLUG[sj] || 'khac'), cur = S.progRaw ? S.progRaw.find(x => x.id === id) : null;
     if (cur && cur.by !== 'con') return;   // ba da nhap -> giu ban cua ba
     await setDoc('progress', id, {date: day, subject: sj, lesson: ls[ls.length-1], lessons: ls.length > 1 ? ls : [], pages: String(ev.pages || '').trim(), part: String(ev.part || '').trim(), note: String(ev.note || '').trim(), by: 'con', kidAt: ev.at});
@@ -2762,6 +2770,7 @@ function kidPanelHTML(day){
   const tm = e => { const d = new Date(e.at); return isNaN(d) ? '' : `${d.getHours()}:${String(d.getMinutes()).padStart(2,'0')}`; };
   const MK = {ok: '✓ xong đủ', unsure: '◯ xong, chưa chắc', no: '✗ chưa làm được'};
   const line = e => e.type === 'mark' ? `${e.mark ? MK[e.mark] : '↺ bỏ đánh dấu'} – <b>${esc(e.subject || '')}</b> ${esc(clip(e.text || '', 70))}`
+    : e.type === 'progress' && e.mode && e.mode !== 'new' ? `${({review: '📝 Ôn tập / ôn thi (không học bài mới)', test: '✅ Làm bài kiểm tra', fix: '🛠️ Chữa bài / sửa đề', off: '🚫 Được nghỉ tiết (đã ghi tiết bị huỷ)'})[e.mode] || e.mode} – <b>${esc(e.subject)}</b>${e.part ? ' · ' + esc(e.part) : ''}`
     : e.type === 'progress' ? `📘 Nhập bài đã học – <b>${esc(e.subject)}</b> bài ${esc(e.lesson)}${e.pages ? ' tr.' + esc(e.pages) : ''}${e.part ? ' (' + esc(e.part) + ')' : ''}${e.note ? ' · ' + esc(e.note) : ''}`
     : e.type === 'newtask' ? `📝 Báo bài mới – <b>${esc(e.subject)}</b> ${esc(e.content)}${e.due ? ' · hạn ' + fmt(e.due) : ''}`
     : e.type === 'read' ? `📖 Đã đọc kiến thức – ${esc(e.text || '')}`

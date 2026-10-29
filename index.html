@@ -157,6 +157,15 @@ input[type=text],input[type=date],input[type=password],select,textarea{width:100
 textarea{min-height:70px;resize:vertical}
 .ok-note{color:var(--ok);font-weight:600;font-size:13px}
 
+.prow{padding:12px 0;border-top:1px dashed var(--line);display:grid;gap:10px}
+.prow:first-child{border-top:0}
+.prow-h{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.prow-f{display:grid;grid-template-columns:150px 120px 1fr;gap:10px}
+.prow-f > p{grid-column:1 / span 2}
+.modes{display:flex;gap:6px;flex-wrap:wrap}
+.mode{border:2px solid var(--line);background:var(--card);border-radius:99px;padding:4px 11px;font-size:13px;font-weight:600;color:var(--muted)}
+.mode[aria-pressed="true"]{border-color:var(--violet);background:var(--violet-soft);color:var(--violet)}
+.mode.off[aria-pressed="true"]{border-color:var(--no);background:var(--no-soft);color:var(--no)}
 /* ---- TKB tuan ---- */
 .tkb{width:100%;border-collapse:separate;border-spacing:6px}
 .tkb th{font:700 15px var(--f-disp);color:var(--muted);padding:4px}
@@ -257,6 +266,7 @@ textarea{min-height:70px;resize:vertical}
   .blk .clock{position:static;width:auto;text-align:left;margin-bottom:4px}
   .blk .clock small{display:inline;margin-left:6px}
   .frow{grid-template-columns:1fr 1fr}
+  .prow-f{grid-template-columns:1fr 1fr} .prow-f > label:last-child{grid-column:1/-1}
   .task{flex-wrap:wrap}
   .task .txt{flex-basis:100%}
   .stamps{margin-left:auto}
@@ -298,6 +308,9 @@ const sjStyle = sj => { const k = SUBJ_COLOR[sj] || (String(sj).startsWith('Toá
 const SUBJ_ICON = {'Toán':'📐','Văn':'📕','Tiếng Anh':'🔤','KHTN':'🔬','LS&ĐL':'🗺️','Tin học':'💻','GDCD':'🤝','Công nghệ':'🛠️','GDĐP':'🏙️','Âm nhạc':'🎵','Mĩ thuật':'🎨','HĐTN':'🧭','Thể dục':'🏃'};
 const ic = sj => SUBJ_ICON[sj] || '📘';
 const SKIP_PROG = new Set(['SH','Thể dục','GDĐP']);
+// Tinh huong tiet hoc (ba 29/10): chi 'new' moi can so bai; 'off' = duoc nghi tiet (app ba ghi tiet bi huy)
+const MODES = [['new','📘','Học bài mới'],['review','📝','Ôn tập / ôn thi'],['test','✅','Làm kiểm tra'],['fix','🛠️','Chữa bài / sửa đề'],['off','🚫','Được nghỉ tiết']];
+const MODE_N = Object.fromEntries(MODES.map(([k, i, n]) => [k, i + ' ' + n]));
 const MARKS = {ok: {s: '✓', n: 'Xong đủ', c: 'ok'}, unsure: {s: '◯', n: 'Xong, chưa chắc', c: 'mid'}, no: {s: '✗', n: 'Chưa làm được', c: 'no'}};
 const MARK_SVG = {ok: '<svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/></svg>',
   unsure: '<svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><circle cx="12" cy="12" r="7.5" fill="none" stroke="currentColor" stroke-width="3"/></svg>',
@@ -480,7 +493,9 @@ function gradeQuiz(qz, A){
     if (q.type === 'mcq'){ const ok = (Array.isArray(ans) ? ans : [ans]).includes(v); per[q.id] = {ok, got: ok ? 1 : 0, max: 1}; }
     else if (q.type === 'tf'){ let g = 0; q.items.forEach(it => { if (v && v[it.k] === ans[it.k]) g++; }); per[q.id] = {ok: g === q.items.length, got: g, max: q.items.length}; }
     else if (q.type === 'classify'){ let g = 0; q.items.forEach((it, i) => { if (v && v[i] === ans[it]) g++; }); per[q.id] = {ok: g === q.items.length, got: g, max: q.items.length}; }
-    else { textN++; const t = noAcc(v); const hits = ans.kw.filter(gp => gp.some(w => t.includes(w))).length; per[q.id] = {text: true, hits, need: ans.need, enough: hits >= ans.need, empty: !t.trim()}; return; }
+    else { const t = noAcc(v); const hits = ans.kw.filter(gp => gp.some(w => t.includes(w))).length;
+      if (ans.auto){ const ok = hits >= ans.need; per[q.id] = {ok, got: ok ? 1 : 0, max: 1, autoText: true}; }   // cau tra loi ngan: may cham theo tu khoa
+      else { textN++; per[q.id] = {text: true, hits, need: ans.need, enough: hits >= ans.need, empty: !t.trim()}; return; } }
     got += per[q.id].got; max += per[q.id].max;
   });
   return {got, max, textN, per, sec};
@@ -546,14 +561,14 @@ function quizResultHTML(qz, ev, n){
     <div class="actions">${(ev.wrong || []).length ? `<button class="btn" data-act="qRetry">🔁 Làm lại ${ev.wrong.length} câu sai</button>` : '<span class="ok-note">Không còn câu trắc nghiệm nào sai 🎉</span>'}<button class="btn line" data-act="qAgain">↺ Làm lại cả bài</button><button class="btn soft" data-tab="know">💡 Xem lại kiến thức</button></div></div>
     ${qz.sections.map(s => `<section class="qsec"><h3 class="qst">${esc(s.title)}</h3><div class="qlist">${s.qs.map(q => {
       const d = det[q.id], tx = tq.find(t => t.qid === q.id);
-      if (q.type === 'text'){ const g = gs[q.id];
+      if (q.type === 'text' && tx){ const g = gs[q.id];
         return `<div class="qcard ${g === 'dat' ? 'good' : g === 'chua' ? 'bad' : 'wait'}"><div class="qlab"><b>${esc(q.label)}</b> ${g === 'dat' ? '<span class="chip" style="background:var(--ok);color:#fff">Ba chấm: Đạt</span>' : g === 'chua' ? '<span class="chip" style="background:var(--no);color:#fff">Ba chấm: Chưa đạt</span>' : `<span class="chip" style="background:var(--mid-soft);color:var(--mid)">Máy dò được ${tx ? tx.hits : 0}/${tx ? tx.need : '?'} ý chính · chờ ba chấm</span>`}</div>
           <div class="qp">${esc(q.prompt)}</div><div class="yours"><b>Con viết:</b> ${esc(tx ? tx.text : '') || '<i>(bỏ trống)</i>'}</div>
           <div class="model"><b>Gợi ý đáp án:</b> ${esc(tx ? tx.model : '')}</div></div>`; }
       const ok = !d;
       return `<div class="qcard ${ok ? 'good' : 'bad'}"><div class="qlab"><b>${esc(q.label)}</b> ${ok ? '<span class="chip" style="background:var(--ok-soft);color:var(--ok)">✓ Đúng</span>' : `<span class="chip" style="background:var(--no-soft);color:var(--no)">✗ ${d.got}/${d.max}</span>`}</div>
         <div class="qp">${esc(q.prompt)}</div>
-        ${ok ? '' : `<div class="yours"><b>Con chọn:</b> ${esc(d.yours || '(bỏ trống)')}</div><div class="model"><b>Đáp án:</b> ${esc(d.right)}${d.why ? `<br><span class="small">${esc(d.why)}</span>` : ''}</div>`}</div>`;
+        ${ok ? '' : `<div class="yours"><b>${q.type === 'text' ? 'Con viết' : 'Con chọn'}:</b> ${esc(d.yours || '(bỏ trống)')}</div><div class="model"><b>Đáp án:</b> ${esc(d.right)}${d.why ? `<br><span class="small">${esc(d.why)}</span>` : ''}</div>`}</div>`;
     }).join('')}</div></section>`).join('')}`;
 }
 function submitQuiz(force){
@@ -562,10 +577,10 @@ function submitQuiz(force){
   if (left && !force){ S.qConfirm = true; render(); return; }
   S.qConfirm = false;
   const R = gradeQuiz(qz, D.a), sec = R.sec;
-  const show = (q, v) => q.type === 'mcq' ? (v ? v + '. ' + ((q.opts.find(x => x.k === v) || {}).t || '') : '')
+  const show = (q, v) => q.type === 'text' ? String(v || '').trim() : q.type === 'mcq' ? (v ? v + '. ' + ((q.opts.find(x => x.k === v) || {}).t || '') : '')
     : q.type === 'tf' ? q.items.map(it => `${it.k}) ${v && v[it.k] ? v[it.k] : '?'}`).join('  ')
     : q.items.map((it, i) => `${q.type === 'classify' && it.length > 30 ? it.slice(0, 2) : it}: ${v && v[i] ? v[i] : '?'}`).join(' · ');
-  const right = q => { const a = sec.ans[q.id];
+  const right = q => { const a = sec.ans[q.id]; if (q.type === 'text') return sec.model[q.id];
     if (q.type === 'mcq') return (Array.isArray(a) ? a : [a]).map(k => k + '. ' + ((q.opts.find(x => x.k === k) || {}).t || '')).join(' / ');
     if (q.type === 'tf') return q.items.map(it => `${it.k}) ${a[it.k]}`).join('  ');
     return q.items.map(it => `${it.length > 30 ? it.slice(0, 2) : it}: ${a[it]}`).join(' · '); };
@@ -737,12 +752,14 @@ function viewAdd(evs){
   const newT = evs.filter(e => e.type === 'newtask' && e.day === T);
   return `<div class="cols" style="margin-top:20px"><div>
     <div class="panel"><div class="ph"><h2>Sáng nay trên lớp học bài gì?</h2><span class="small muted">${DAYS[dow(T)]} ${fmt(T)}</span></div>
-      <p class="small muted" style="margin-top:0">Ghi số bài và trang đã học tới đâu theo vở ghi. Ba dựa vào đây để giao bài chiều nay.</p>
-      ${subs.length ? `<div class="form">${subs.map(sj => { const v = S.prog[sj] || {}, d = [...doneP].reverse().find(e => e.subject === sj); return `<div class="frow">
-        <span class="chip" style="${sjStyle(sj)}">${ic(sj)} ${esc(sj)}</span>
-        <label class="f">Bài số<input type="text" data-prog="${esc(sj)}" data-k="lesson" value="${esc(v.lesson ?? (d ? d.lesson : ''))}" placeholder="vd 20 hoặc 19, 20"></label>
-        <label class="f">Trang<input type="text" data-prog="${esc(sj)}" data-k="pages" value="${esc(v.pages ?? (d ? d.pages : ''))}" placeholder="90–92"></label>
-        <label class="f">Phần / ghi chú<input type="text" data-prog="${esc(sj)}" data-k="part" value="${esc(v.part ?? (d ? d.part : ''))}" placeholder="vd Luyện tập 2"></label>
+      <p class="small muted" style="margin-top:0">Mỗi môn chọn tiết hôm nay thế nào. Học bài mới thì ghi số bài và trang tới đâu theo vở ghi. Ba dựa vào đây để giao bài chiều nay.</p>
+      ${subs.length ? `<div class="form">${subs.map(sj => { const v = S.prog[sj] || {}, d = [...doneP].reverse().find(e => e.subject === sj), mode = v.mode || (d && d.mode) || 'new'; return `<div class="prow">
+        <div class="prow-h"><span class="chip" style="${sjStyle(sj)}">${ic(sj)} ${esc(sj)}</span>
+          <span class="modes" role="group" aria-label="Tiết ${esc(sj)} hôm nay">${MODES.map(([k, i, n]) => `<button class="mode ${k === 'off' ? 'off' : ''}" aria-pressed="${mode === k}" data-act="pmode" data-sj="${esc(sj)}" data-v="${k}">${i} ${n}</button>`).join('')}</span>
+          ${d ? `<span class="ok-note">✓ đã gửi ${hm(d.at)}</span>` : ''}</div>
+        <div class="prow-f">${mode === 'new' ? `<label class="f">Bài số<input type="text" data-prog="${esc(sj)}" data-k="lesson" value="${esc(v.lesson ?? (d && d.mode !== 'off' ? d.lesson || '' : ''))}" placeholder="vd 20 hoặc 19, 20"></label>
+          <label class="f">Trang<input type="text" data-prog="${esc(sj)}" data-k="pages" value="${esc(v.pages ?? (d ? d.pages || '' : ''))}" placeholder="90–92"></label>` : `<p class="small muted" style="margin:0;align-self:center">${mode === 'off' ? 'Tiết này không học – ba sẽ dời bài của môn này sang buổi học sau.' : 'Không học bài mới – không cần ghi số bài.'}</p>`}
+          <label class="f">${mode === 'new' ? 'Phần / ghi chú' : 'Ghi chú (nếu có)'}<input type="text" data-prog="${esc(sj)}" data-k="part" value="${esc(v.part ?? (d ? d.part || '' : ''))}" placeholder="${mode === 'new' ? 'vd Luyện tập 2' : mode === 'off' ? 'vd cô đi họp' : mode === 'test' ? 'vd kiểm tra 15 phút Bài 13' : 'vd ôn đề cương câu 1–10'}"></label></div>
       </div>`; }).join('')}</div>
       <div class="actions"><button class="btn" data-act="saveProg">💾 Gửi bài đã học cho ba</button>${doneP.length ? `<span class="ok-note">Đã gửi ${new Set(doneP.map(e => e.subject)).size} môn · lần cuối ${hm(doneP[doneP.length-1].at)}</span>` : ''}</div>`
       : '<p class="muted">Hôm nay không có tiết học cần ghi.</p>'}
@@ -793,7 +810,7 @@ function viewAward(evs){
 function viewLog(evs){
   const T = today(), days = [...new Set(evs.map(e => e.day))].sort().reverse().slice(0, 7);
   const line = e => e.type === 'mark' ? `${e.mark ? MARKS[e.mark].s + ' ' + MARKS[e.mark].n : '↺ Bỏ đánh dấu'} – <b>${esc(e.subject || '')}</b> ${esc(e.text || '')}`
-    : e.type === 'progress' ? `📘 Bài đã học – <b>${esc(e.subject)}</b> bài ${esc(e.lesson)}${e.pages ? ' tr.' + esc(e.pages) : ''}`
+    : e.type === 'progress' ? (e.mode && e.mode !== 'new' ? `${MODE_N[e.mode] || e.mode} – <b>${esc(e.subject)}</b>${e.part ? ' · ' + esc(e.part) : ''}` : `📘 Bài đã học – <b>${esc(e.subject)}</b> bài ${esc(e.lesson)}${e.pages ? ' tr.' + esc(e.pages) : ''}`)
     : e.type === 'newtask' ? `📝 Bài mới – <b>${esc(e.subject)}</b> ${esc(e.content)}`
     : e.type === 'read' ? `📖 Đọc xong kiến thức – ${esc(e.text || '')}`
     : e.type === 'quiz' ? `📤 Nộp bài ôn <b>${esc(e.subject)}</b>: ${e.got}/${e.max} ý đúng${e.textN ? ' · ' + e.textN + ' câu tự luận' : ''} (lần ${e.attempt})`
@@ -849,10 +866,15 @@ app.addEventListener('click', async e => {
     case 'quiz': S.quiz[d.k] = !S.quiz[d.k]; render(); break;
     case 'reveal': S.reveal[d.k] = !S.reveal[d.k]; render(); break;
     case 'read': addEvent({type: 'read', kid: d.k, text: d.t, planDay: d.day}); toast('Giỏi lắm! Giờ làm bài tập nào ✏️'); break;
+    case 'pmode': S.prog[d.sj] = {...(S.prog[d.sj] || {}), mode: d.v}; render(); break;
     case 'saveProg': {
       let n = 0;
-      Object.entries(S.prog).forEach(([sj, v]) => { if (!String(v.lesson || '').trim()) return; addEvent({type: 'progress', subject: sj, lesson: String(v.lesson).trim(), pages: String(v.pages || '').trim(), part: String(v.part || '').trim()}); n++; });
-      if (!n){ toast('Con ghi số bài trước nhé'); return; } S.prog = {}; toast('Đã gửi bài đã học ' + n + ' môn cho ba'); break; }
+      const miss = [];
+      Object.entries(S.prog).forEach(([sj, v]) => { const mode = v.mode || 'new';
+        if (mode === 'new' && !String(v.lesson || '').trim()){ if (v.mode || v.pages || v.part) miss.push(sj); return; }
+        addEvent({type: 'progress', subject: sj, mode, lesson: mode === 'new' ? String(v.lesson).trim() : '', pages: mode === 'new' ? String(v.pages || '').trim() : '', part: String(v.part || '').trim()}); n++; });
+      if (miss.length){ toast('Con ghi số bài cho ' + miss.join(', ') + ' (hoặc chọn tình huống khác)'); if (!n) return; }
+      if (!n){ toast('Con chọn tình huống hoặc ghi số bài trước nhé'); return; } S.prog = {}; toast('Đã gửi bài đã học ' + n + ' môn cho ba'); break; }
     case 'newTask': {
       const t = S.nt; if (!t.subject || !t.content.trim()){ toast('Chọn môn và ghi nội dung bài'); return; }
       addEvent({type: 'newtask', subject: t.subject, content: t.content.trim(), source: t.source, due: t.due}); S.nt = {subject: '', content: '', source: 'V', due: ''}; toast('Đã báo bài mới cho ba'); break; }
