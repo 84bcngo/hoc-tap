@@ -1275,17 +1275,8 @@ function viewToday(){
 
   ${progressCardHTML(day)}
   ${lsdlMissingHTML(day)}
-  <section class="card">
-    <div class="row" style="align-items:center"><div class="eyebrow" style="margin:0"><span class="time">Trước 13:30</span> Chuyển tin cho con</div>
-      <button class="btn ghost" style="padding:4px 12px;font-size:13px;margin-left:auto" data-act="msgToggle">${S.msgOpen[day]===false?'▼ Mở tin nhắn':'▲ Thu gọn'}</button></div>
-    ${S.msgOpen[day]===false ? `<div class="row" style="margin-top:8px;align-items:center"><span class="small muted">Đã thu gọn${S.copiedAt[day]?' · đã sao chép lúc '+S.copiedAt[day]:''}.</span><button class="btn ghost" style="padding:4px 12px;font-size:13px" data-act="copy">Sao chép lại</button></div>` : `
-    <h2>Tin nhắn nhiệm vụ gửi Zalo gia đình</h2>
-    <p class="small muted">Nhập bài của cô ở tab <b>Nhập bài</b> trước, tin nhắn sẽ tự cập nhật. Bấm Sao chép rồi dán vào Zalo.</p>
-    <label class="f" for="msgNote">Lời nhắn thêm của ba/mẹ (tuỳ chọn)</label>
-    <input id="msgNote" type="text" data-bind="msgNote" value="${esc(S.msgNote)}" placeholder="Ví dụ: Tối nay ba về muộn 15 phút" style="width:100%;margin:4px 0 10px">
-    <div class="msg" id="childMsg">${msgHTML(msg, false)}</div>
-    <div class="row" style="margin-top:10px"><button class="btn" data-act="copy">Sao chép tin nhắn</button><button class="btn ghost" data-act="refreshMsg">Cập nhật lời nhắn</button><button class="btn ghost" data-act="msgToggle">▲ Thu gọn (đã gửi xong)</button></div>`}
-  </section>
+  ${todayTasksHTML(day)}
+  ${doBaiHTML(day)}
 
   ${moveCardHTML(day)}
   ${checkGradeHTML(day, checkList)}
@@ -1905,14 +1896,14 @@ function progressCardHTML(day){
     </div>`;
   };
   const nSaved = subs.filter(sj=>S.progress.some(p=>p.date===day&&p.subject===sj)).length;
-  const openP = S.progOpen[day] !== undefined ? S.progOpen[day] : nSaved < subs.length;   // mac dinh: nhap du thi tu thu gon
+  const openP = S.progOpen[day] !== undefined ? S.progOpen[day] : false;   // ba 30/10: con tu nhap tren app -> mac dinh thu gon, ba mo ra khi can sua
   const toggle = `<button class="btn ghost" style="padding:4px 12px;font-size:13px;margin-left:auto" data-act="progToggle">${openP?'▲ Thu gọn':'▼ Mở ra để nhập / sửa'}</button>`;
   if (!openP) return `<section class="card">
-    <div class="row" style="align-items:center"><div class="eyebrow" style="margin:0"><span class="time">Trưa</span> Tiến độ học hôm nay</div>${toggle}</div>
-    <p class="small" style="margin-top:6px"><b>${nSaved}/${subs.length} môn đã lưu</b>${nSaved?': ':''}${subs.map(sj=>{ const pr=S.progress.find(p=>p.date===day&&p.subject===sj); return pr?`${esc(sj)} bài ${esc(pr.lesson)}${pr.pages?' tr.'+esc(pr.pages):''}`:''; }).filter(Boolean).join(' · ')}${nSaved<subs.length?` · <b style="color:var(--p2)">còn thiếu: ${esc(subs.filter(sj=>!S.progress.some(p=>p.date===day&&p.subject===sj)).join(', '))}</b>`:''}</p>
+    <div class="row" style="align-items:center"><div class="eyebrow" style="margin:0"><span class="time">Trưa</span> Bài con nhập sáng nay – ba xem / sửa</div>${toggle}</div>
+    <p class="small" style="margin-top:6px"><b>${nSaved}/${subs.length} môn đã lưu</b>${nSaved?': ':''}${subs.map(sj=>{ const pr=S.progress.find(p=>p.date===day&&p.subject===sj); return pr?`${esc(sj)} bài ${esc(pr.lesson)}${pr.pages?' tr.'+esc(pr.pages):''}`:''; }).filter(Boolean).join(' · ')}${nSaved<subs.length?` · <b style="color:var(--p2)">còn thiếu: ${esc(subs.filter(sj=>!S.progress.some(p=>p.date===day&&p.subject===sj)).join(', '))}</b>`:''}${kidModesHTML(day)}</p>
   </section>`;
   return `<section class="card">
-    <div class="row" style="align-items:center"><div class="eyebrow" style="margin:0"><span class="time">Trưa</span> Tiến độ học hôm nay</div>${toggle}</div>
+    <div class="row" style="align-items:center"><div class="eyebrow" style="margin:0"><span class="time">Trưa</span> Bài con nhập sáng nay – ba xem / sửa</div>${toggle}</div>
     <h2>Hôm nay con học bài nào?</h2>
     <p class="small muted">Lấy từ sổ ghi chú của con. <b>Trang SGK là căn cứ chính</b>: app so với trang cuối của bài để biết đã học hết bài chưa (chưa hết thì chỉ ôn phần đã học, bài tập cuối bài để đến khi học xong). Học nhiều bài trong một buổi: ghi các bài cách nhau dấu phẩy (vd <b>5, 6, 7</b> hoặc <b>DL5, DL6, DL7</b>) và trang của cả buổi (vd 113-118). App dùng tiến độ này để giao câu SBT cụ thể trong tin nhắn. Nếu dán ảnh sổ ở tab Nhập bài, tiến độ được điền tự động.</p>
     <div class="tlist">${subs.map(row).join('')}</div>
@@ -2269,6 +2260,7 @@ app.addEventListener('click', async e => {
     case 'aiWeek': aiWeek(); break;
     case 'localConnect': await STORE().connect(); render(); break;
     case 'kidSync': await ingestKid(); schedulePublish(0); break;
+    case 'doBaiPrint': doBaiPrint(); break;
     case 'kidGrade': kidGradeSet(d.ev, {grades: {[d.q]: d.v}}); break;
     case 'kidComment': kidGradeSet(d.ev, {comment: (document.getElementById('kc_' + d.ev) || {}).value || ''}); break;
     case 'storeFile': try{ localStorage.setItem('tro-ly-6a14-store', 'file'); }catch(x){} location.reload(); break;
@@ -2788,6 +2780,78 @@ function kidPanelHTML(day){
 // Nho khung "Xem bai lam" dang mo khi trang ve lai
 document.addEventListener('toggle', e => { const d = e.target; if (d && d.dataset && d.dataset.kidq) KID.open[d.dataset.kidq] = d.open; }, true);
 document.addEventListener('input', e => { const t = e.target; if (t && t.id && t.id.startsWith('kc_')) KID.cdraft[t.id.slice(3)] = t.value; }, true);
+
+/* ============ TAB HOM NAY (ba 30/10): NHIEM VU DA GIAO + PHIEU DO BAI ============ */
+const MK_LBL = {done: ['✓ Xong', 'var(--ok-soft)', 'var(--ok)'], review: ['◯ Chưa chắc', 'var(--p2-soft)', 'var(--p2)'], help: ['✗ Chưa làm được', 'var(--p1-soft)', 'var(--p1)'], todo: ['Chưa làm', 'var(--p3-soft)', 'var(--p3)']};
+const hhmm = at => { const d = new Date(at); return isNaN(d) ? '' : `${d.getHours()}:${String(d.getMinutes()).padStart(2,'0')}`; };
+function lastQuiz(keyId, taskId){ const q = KID.events.filter(e => e.type === 'quiz' && e.quizId === keyId && (!taskId || !e.taskId || e.taskId === taskId)); return q[q.length - 1]; }
+// Nhiem vu buoi chieu – dung dung ke hoach da giao sang app cua con
+function todayTasksHTML(day){
+  let p; try{ p = studentPlan(day); }catch(e){ console.error(e); return ''; }
+  const n = p.groups.reduce((s, g) => s + g.tasks.length, 0), nDone = p.groups.reduce((s, g) => s + g.tasks.filter(t => t.status === 'done').length, 0);
+  const tot = p.groups.reduce((s, g) => s + (g.min || 0), 0);
+  return `<section class="card">
+    <div class="eyebrow">📋 Nhiệm vụ đã giao cho con${S.store === 'gh' ? ` · app của con nhận lúc ${GH.st.pubAt || '…'}` : ''}</div>
+    <h2>${esc(p.title.replace(/^📚\s*/, ''))} <span class="small muted" style="font-weight:500">· ${nDone}/${n} xong${tot ? ' · ~' + tot + ' phút' : ''}</span></h2>
+    ${p.head.length ? `<p class="small muted" style="margin:4px 0 10px">${p.head.map(esc).join('<br>')}</p>` : ''}
+    ${p.groups.length ? p.groups.map(g => `<div class="sjgrp"><h3 class="sjh">${esc(g.subject)}${g.start ? ` <span class="small muted" style="font-weight:500">⏱ ${esc(g.start)}–${esc(g.end)} (~${g.min} phút)</span>` : ''}${g.exam ? ' <span class="chip debt">ÔN KT</span>' : ''}</h3>
+      ${g.tasks.map(t => { const st = MK_LBL[t.status] || MK_LBL.todo, q = t.snap.keyId && !t.snap.noQuiz ? lastQuiz(t.snap.keyId, t.id) : null;
+        const todo = String(t.snap.note || '').split('||')[0].trim();
+        return `<div class="trow" style="padding:6px 0 8px 12px;border-left:3px solid ${st[2]};margin:6px 0">
+          <div><span class="chip" style="background:${st[1]};color:${st[2]}">${st[0]}${t.kidAt && t.status !== 'todo' ? ' · ' + hhmm(t.kidAt) : ''}</span> <span class="small muted">[${esc(t.src)}]</span> ${esc(t.text)}${t.tag ? ` <b class="small" style="color:var(--p1)">${esc(t.tag)}</b>` : ''}
+            ${t.snap.noQuiz ? ' <span class="chip P3">học thuộc / làm vở</span>' : t.snap.keyId && t.snap.keyId.includes('decuong') ? ' <span class="chip P2">làm trên app</span>' : ''}</div>
+          ${/^Việc cần làm:/.test(todo) ? `<div class="small muted" style="margin-top:2px">📌 ${esc(todo.replace(/^Việc cần làm:\s*/, ''))}</div>` : ''}
+          ${q ? `<div class="small" style="margin-top:2px">📤 Đã nộp bài trên app ${hhmm(q.at)}: <b>${q.got}/${q.max}</b> ý trắc nghiệm đúng${q.attempt > 1 ? ` (lần ${q.attempt})` : ''}${(q.texts || []).length ? ` · ${q.texts.length} câu tự luận chờ chấm ở khung 📱 phía trên` : ''}</div>` : ''}
+        </div>`; }).join('')}</div>`).join('') : '<p class="muted">Chiều nay chưa có nhiệm vụ nào.</p>'}
+    ${p.knowledge.length ? `<p class="small muted" style="margin-top:6px">💡 Kèm ${p.knowledge.length} phần kiến thức cần nắm (con xem ở mục Kiến thức).${p.memo ? ' Có phần học thuộc – tối dò bài ở phiếu bên dưới / khung chấm bài.' : ''}</p>` : ''}
+    ${p.tail.length ? `<details style="margin-top:6px"><summary class="small">Nhắc việc cuối buổi (con thấy trên app)</summary><ul class="small" style="margin:6px 0 0;padding-left:18px">${p.tail.map(x => `<li>${esc(x)}</li>`).join('')}</ul></details>` : ''}
+  </section>`;
+}
+// Phieu do bai: cac nhiem vu hoc thuoc / tu luan (noQuiz) trong ngay – cau hoi + y can co + ✓/✗ (luu vao checks nhu cham bai)
+const isTfAns = a => /^\s*[a1]\)\s*[ĐS](?=[.\s(]|$)/.test(a.a || '');
+const isMcqQ = a => /(^|\s)A\.\s*\S/.test(String(a.q || '').replace(/\n/g, ' ')) && /\s[B-D]\.\s*\S/.test(String(a.q || '').replace(/\n/g, ' '));
+function doBaiItems(t){
+  const k = S.keys[t.snap.keyId]; if (!k) return [];
+  const all = k.answers || [], c = String(t.text || '');
+  if (/^van-decuong/.test(t.snap.keyId)){
+    if (/2\.1|thơ/i.test(c)) return all.filter(a => /^(ĐH|Viết 1)/.test(a.ex));
+    if (/2\.2|Tiếng Việt/i.test(c)) return all.filter(a => /^TV/.test(a.ex));
+    if (/2\.3|bài văn/i.test(c)) return all.filter(a => /^Viết 2/.test(a.ex));
+  }
+  return all.filter(a => !isTfAns(a) && !isMcqQ(a));
+}
+function doBaiTasks(day){ let p; try{ p = studentPlan(day); }catch(e){ return []; }
+  return p.groups.flatMap(g => g.tasks.filter(t => t.snap.noQuiz && t.snap.keyId).map(t => ({...t, subject: g.subject, items: doBaiItems(t)}))).filter(t => t.items.length); }
+function doBaiHTML(day){
+  const ts = doBaiTasks(day); if (!ts.length) return '';
+  return `<section class="card">
+    <div class="eyebrow">🧠 Phiếu dò bài – phần học thuộc / tự luận chiều nay</div>
+    <h2>Ba hỏi, con trả lời không nhìn đề cương</h2>
+    <p class="small muted">Đọc câu hỏi cho con trả lời miệng (hoặc xem vở với bài làm vào vở). Đủ ý chính → ✓, thiếu ý → ✗. Câu ✗ sẽ được nhắc học lại ở khung chấm bài các buổi sau. <button class="btn ghost" style="padding:2px 10px;font-size:12px" data-act="doBaiPrint">🖨️ In phiếu</button></p>
+    ${ts.map((t, i) => { const ck = S.checks[day + '_' + t.snap.keyId] || {ok: [], wrong: []};
+      const nO = t.items.filter(a => (ck.ok || []).includes(a.ex)).length, nW = t.items.filter(a => (ck.wrong || []).includes(a.ex)).length;
+      const ok = 'dobai|' + day + '|' + t.id, isO = S.openK[ok] !== undefined ? S.openK[ok] : i === 0;
+      return `<details class="kblk" data-openk="${esc(ok)}" ${isO ? 'open' : ''} style="margin-top:10px"><summary>${esc(t.subject)} – ${esc(t.text.replace(/^Ôn đề cương giữa kì 1 – /, ''))} <span class="kcnt">(${t.items.length} câu · đã dò ${nO + nW}${nW ? ` · <b style="color:var(--p1)">✗ ${nW}</b>` : ''})</span></summary>
+        <div class="tablewrap"><table><thead><tr><th>Câu</th><th>Câu hỏi</th><th>Ý cần có</th><th>✓ / ✗</th></tr></thead><tbody>
+        ${t.items.map(a => `<tr><td>${esc(a.ex)}</td><td style="white-space:pre-line;min-width:160px">${esc(a.q || '')}</td><td style="white-space:pre-line;min-width:180px">${esc(a.a)}${a.why ? `<div class="small muted">${esc(a.why)}</div>` : ''}</td><td>${segGrade(t.snap.keyId, a.ex, ck)}</td></tr>`).join('')}
+        </tbody></table></div></details>`; }).join('')}
+  </section>`;
+}
+function doBaiPrint(){
+  const ts = doBaiTasks(S.cur); if (!ts.length) return;
+  const w = window.open('', '_blank'); if (!w) { toast('Trình duyệt chặn cửa sổ in – cho phép pop-up rồi thử lại'); return; }
+  w.document.write(`<!doctype html><meta charset="utf-8"><title>Phiếu dò bài ${fmt(S.cur)}</title><style>body{font:13px/1.45 system-ui,sans-serif;margin:18px}h1{font-size:18px}h2{font-size:15px;margin:16px 0 6px}table{border-collapse:collapse;width:100%}td,th{border:1px solid #999;padding:5px 7px;vertical-align:top;text-align:left}td.c{width:56px;text-align:center}</style>
+    <h1>Phiếu dò bài – ${DAYS[dow(S.cur)]} ${fmt(S.cur)}</h1>${ts.map(t => `<h2>${esc(t.subject)} – ${esc(t.text)}</h2><table><tr><th>Câu</th><th>Câu hỏi</th><th>Ý cần có</th><th class="c">✓ / ✗</th></tr>${t.items.map(a => `<tr><td>${esc(a.ex)}</td><td style="white-space:pre-line">${esc(a.q || '')}</td><td style="white-space:pre-line">${esc(a.a)}</td><td class="c"></td></tr>`).join('')}</table>`).join('')}`);
+  w.document.close(); w.focus(); setTimeout(() => w.print(), 300);
+}
+// Tinh huong tiet hoc con bao (on tap, kiem tra, nghi tiet...) – hien o khung tien do khi thu gon
+function kidModesHTML(day){
+  if (S.store !== 'gh') return '';
+  const NM = {review: 'ôn tập / ôn thi', test: 'làm kiểm tra', fix: 'chữa bài', off: 'được nghỉ tiết', new: 'học bài mới'}, last = {};
+  KID.events.filter(e => e.type === 'progress' && (e.day || '') === day).forEach(e => { last[e.subject] = e; });
+  const xs = Object.values(last); if (!xs.length) return '<br><span class="muted">Con chưa nhập bài trên app hôm nay.</span>';
+  return '<br>📱 Con nhập: ' + xs.map(e => `<b>${esc(e.subject)}</b> ${e.mode && e.mode !== 'new' ? esc(NM[e.mode] || e.mode) : 'bài ' + esc(e.lesson) + (e.pages ? ' tr.' + esc(e.pages) : '')} <span class="muted">(${hhmm(e.at)})</span>`).join(' · ');
+}
 
 /* ============ KET NOI ============ */
 async function loadKeys(){
