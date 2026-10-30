@@ -612,9 +612,9 @@ function hhWork(day, skip){
 // Tiet LS&DL da hoc ma chua ghi tien do (con trong thoi han lam bai) -> nhac ba ghi
 function lsdlMissingHTML(day){
   const sj = 'LS&ĐL', miss = [];
-  for (let i = 0; i <= 7; i++){ const d = addDays(day,-i); if (!hasClass(sj, d) || S.progress.some(p => p.subject===sj && p.date===d)) continue; if (nextLesson(sj, d) > day) miss.push(d); }
+  for (let i = 0; i <= 7; i++){ const d = addDays(day,-i); if (!hasClass(sj, d) || S.progress.some(p => p.subject===sj && p.date===d) || kidLogged(sj, d)) continue; if (nextLesson(sj, d) > day) miss.push(d); }
   if (!miss.length) return '';
-  return `<section class="card"><div class="warn"><b>Chưa ghi tiến độ LS&amp;ĐL</b> buổi ${miss.map(fmt).join(', ')} – app chưa giao bài LS&amp;ĐL được. ${miss.includes(day) ? 'Ghi ở mục "Tiến độ học hôm nay" bên dưới (bài nào, trang nào).' : 'Chọn đúng ngày đó ở đầu trang rồi ghi ở mục "Tiến độ học hôm nay".'}</div></section>`;
+  return `<section class="card"><div class="warn"><b>Chưa ghi tiến độ LS&amp;ĐL</b> buổi ${miss.map(fmt).join(', ')} – con chưa nhập trên app nên app chưa biết bài LS&amp;ĐL để giao. Nhắc con vào mục Nhập bài, hoặc ${miss.includes(day) ? 'ba ghi ở khung "Bài con nhập sáng nay" bên dưới.' : 'ba chọn đúng ngày đó ở đầu trang rồi ghi ở khung "Bài con nhập sáng nay".'}</div></section>`;
 }
 function defaultSBT(day, ignoreStored){ return memo('defaultSBT', [day, !!ignoreStored], () => defaultSBT0(day, ignoreStored)); }
 function defaultSBT0(day, ignoreStored){
@@ -2810,7 +2810,8 @@ function todayTasksHTML(day){
 // Phieu do bai: cac nhiem vu hoc thuoc / tu luan (noQuiz) trong ngay – cau hoi + y can co + ✓/✗ (luu vao checks nhu cham bai)
 const isTfAns = a => /^\s*[a1]\)\s*[ĐS](?=[.\s(]|$)/.test(a.a || '');
 const isMcqQ = a => /(^|\s)A\.\s*\S/.test(String(a.q || '').replace(/\n/g, ' ')) && /\s[B-D]\.\s*\S/.test(String(a.q || '').replace(/\n/g, ' '));
-function doBaiItems(t){
+function doBaiItems(t){ const n = a => { const m = String(a.ex).match(/\d+/); return m ? +m[0] : 999; }; return doBaiItems0(t).map((a, i) => ({a, i})).sort((x, y) => n(x.a) - n(y.a) || x.i - y.i).map(x => x.a); }
+function doBaiItems0(t){
   const k = S.keys[t.snap.keyId]; if (!k) return [];
   const all = k.answers || [], c = String(t.text || '');
   if (/^van-decuong/.test(t.snap.keyId)){
@@ -2942,6 +2943,8 @@ function renderChat(){
 }
 async function chatSync(){ await Promise.all([ingestKid(), loadBa()]); renderChat(); }
 setInterval(() => { if (CHAT.open) chatSync(); }, 15000);
+// Con da bao tiet hoc tren app (ke ca on tap / kiem tra / nghi tiet) -> coi nhu da ghi tien do ngay do
+const kidLogged = (sj, d) => S.store === 'gh' && KID.events.some(e => e.type === 'progress' && e.subject === sj && (e.day || '') === d);
 
 /* ============ KET NOI ============ */
 async function loadKeys(){
