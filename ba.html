@@ -217,11 +217,28 @@ const TKB_V6 = {
   5: [{s:'Tiếng Anh'},{s:'Mĩ thuật'},{s:'Toán',l:'Toán (Hình học)'},{s:'Toán',l:'Toán (Số học)'},{s:'KHTN'}],
   6: [{s:'Văn'},{s:'Văn'},{s:'HĐTN',l:'SHCĐ'},{s:'KHTN'}]
 };
+const TKB_V7 = {   // truong ghi 'So 6', ap dung tu 2/11/2026
+  1: [{s:'SH',l:'Chào cờ'},{s:'KHTN'},{s:'Toán'},{s:'Công nghệ'},{s:'Âm nhạc'}],
+  2: [{s:'KHTN'},{s:'GDCD'},{s:'Tiếng Anh'},{s:'Tiếng Anh'},{s:'HĐTN',l:'SHCĐ'}],
+  3: [{s:'Thể dục'},{s:'Thể dục'},{s:'KHTN'},{s:'KHTN'},{s:'Tin học'}],
+  4: [{s:'LS&ĐL'},{s:'GDĐP'},{s:'Văn'},{s:'Văn'},{s:'Toán'}],
+  5: [{s:'Tiếng Anh'},{s:'Mĩ thuật'},{s:'Toán'},{s:'Toán'},{s:'SH',l:'SHL'}],
+  6: [{s:'Văn'},{s:'Văn'},{s:'LS&ĐL'},{s:'LS&ĐL'}]
+};
+const PREP_V7 = {
+  1:{items:'Đồng phục chào cờ, sách Công nghệ, Âm nhạc',focus:'KHTN, Toán, Công nghệ'},
+  2:{items:'Sách GDCD',focus:'KHTN, GDCD, Tiếng Anh – 2 tiết'},
+  3:{items:'Đồ thể dục, bình nước, sách Tin học',focus:'KHTN – 2 tiết, Tin học'},
+  4:{items:'Sách GDĐP',focus:'LS&ĐL, GDĐP, Văn – 2 tiết, Toán'},
+  5:{items:'Đồ dùng Mĩ thuật',focus:'Tiếng Anh, Toán – 2 tiết'},
+  6:{items:'—',focus:'Văn – 2 tiết, LS&ĐL – 2 tiết'}
+};
 const TKB_LIST = [
   {from:'2026-09-28', no:3, t:TKB_V3, shift:{5:{'Tin học':2}}},
   {from:'2026-10-05', no:4, t:TKB_V4, shift:{}},
   {from:'2026-10-19', no:5, t:TKB_V5, shift:{}},
-  {from:'2026-10-26', no:6, t:TKB_V6, shift:{}}   // ba 7/10: bai chi giao vao chieu truoc buoi hoc theo TKB (bo lam som Anh tu T3)
+  {from:'2026-10-26', no:6, t:TKB_V6, shift:{}},   // ba 7/10: bai chi giao vao chieu truoc buoi hoc theo TKB (bo lam som Anh tu T3)
+  {from:'2026-11-02', no:7, t:TKB_V7, shift:{}, prep:PREP_V7}   // truong ghi 'So 6'
 ];
 const tkbVer = d => { let v = TKB_LIST[0]; for (const x of TKB_LIST) if (d >= x.from) v = x; return v; };
 // Ngay nghi dot xuat (ba nhap o tab TKB, luu meta.offDays {ngay: ly do}): ngay do khong co tiet nao
@@ -1235,7 +1252,7 @@ function childMessage0(day){
   if (extraOld.length){ L.push('', `[[gray|➕ NẾU CÒN THỜI GIAN – trả nợ bài cũ ba giao thêm (sau khi xong hết nhiệm vụ trên${clk!=null && clk < END ? ', còn khoảng '+(END-clk)+' phút trước 17:00' : ''})]]`); extraOld.forEach(t => L.push(`• **${t.subject}** [${SRC[t.source]||'Vở'}] ${u(t.content)}`)); }
   const subs = [...new Set(tkbOf(tm)[dow(tm)].filter(p=>p.s!=='SH').map(p=>p.s))];
   const endWork = clk;
-  L.push('', `**🎒 ${w>=1&&w<=5 && (endWork==null || endWork<=END)?'17:00 ':''}Soạn cặp cho ${fmt(tm)}:** ${subs.join(', ')}.${PREP[dow(tm)].items!=='—'?' Mang thêm: '+PREP[dow(tm)].items+'.':''}`);
+  L.push('', `**🎒 ${w>=1&&w<=5 && (endWork==null || endWork<=END)?'17:00 ':''}Soạn cặp cho ${fmt(tm)}:** ${subs.join(', ')}.${prepOf(tm)[dow(tm)].items!=='—'?' Mang thêm: '+prepOf(tm)[dow(tm)].items+'.':''}`);
   L.push('✅ **17:30 Tự kiểm tra:** dò lại **từng dòng nhiệm vụ ba giao ở trên**, mở vở/sách xem đã làm đủ chưa, rồi đánh dấu: [[green|✓]] xong đủ · [[yellow|◯]] xong nhưng chưa chắc đúng · [[red|✗]] chưa xong / không làm được. **18:00 báo ba/mẹ:** bài nào [[yellow|◯]], [[red|✗]] và còn thiếu phần nào.');
   L.push('💡 Bài nào không làm được thì đánh [[red|✗]] nhanh rồi làm bài khác, không ngồi lâu kéo dài.');
   if (S.msgNote.trim()) L.push('', '**💬 ' + u(S.msgNote.trim()) + '**');
@@ -1268,7 +1285,7 @@ function viewToday(){
     <h2>${esc(pf.type)}</h2>
     <div class="grid2">
       <div><h3 style="margin-top:0">Hôm nay học</h3>${periodsHTML(day)}</div>
-      <div><h3 style="margin-top:0">Ngày mai (${fmt(tm)})</h3>${periodsHTML(tm)}<p class="small muted" style="margin-top:6px">Mang thêm: ${esc(PREP[dow(tm)].items)}</p></div>
+      <div><h3 style="margin-top:0">Ngày mai (${fmt(tm)})</h3>${periodsHTML(tm)}<p class="small muted" style="margin-top:6px">Mang thêm: ${esc(prepOf(tm)[dow(tm)].items)}</p></div>
     </div>
     <p class="note" style="margin-top:12px"><b>Trọng tâm chiều nay:</b> ${esc(pf.focus)}</p>
   </section>
@@ -1303,7 +1320,7 @@ function viewToday(){
     ${debts.length ? `<p>${debts.length} mục nợ – chọn nguyên nhân ở Daily Check phía trên. P1 trả trong 24 giờ, P2 trong 3 ngày, P3 thì bỏ.</p>${debts.length>3?'<p class="warn">Quá 3 mục nợ: Weekly Review tuần này phải giảm tải.</p>':''}` : '<p class="muted">Không có nợ.</p>'}
 
     <h3>4. Chuẩn bị cho ${fmt(tm)} (con tự làm, ba/mẹ chỉ nhìn dấu tick)</h3>
-    <p>Đọc lướt vở ghi bài gần nhất (3–5 phút/môn): <b>${esc(tmSubs.join(', ')||'—')}</b>. Lưu ý: ${esc(PREP[dow(tm)].focus)}. Soạn cặp + ${esc(PREP[dow(tm)].items)}.</p>
+    <p>Đọc lướt vở ghi bài gần nhất (3–5 phút/môn): <b>${esc(tmSubs.join(', ')||'—')}</b>. Lưu ý: ${esc(prepOf(tm)[dow(tm)].focus)}. Soạn cặp + ${esc(prepOf(tm)[dow(tm)].items)}.</p>
 
     <h3>Lịch tối nay</h3>
     <ul class="timeline">${pf.tl.map(([t,x])=>`<li><b>${t}</b><span>${esc(x)}</span></li>`).join('')}</ul>
@@ -1567,6 +1584,7 @@ function viewWeek(){
 /* ============ TAB 5: TKB ============ */
 const TEACH = {'Toán':'Kiều (T)','Văn':'Tuyền','Tiếng Anh':'Kiều (A)','KHTN':'Hoàng','LS&ĐL':'Thoa (Đ)','Công nghệ':'Tuyết','GDCD':'Lệ','Tin học':'Thủy','GDĐP':'Giang','Âm nhạc':'Thảo','Mĩ thuật':'Thành','Thể dục':'Thủy'};
 const TEACH6 = {'LS&ĐL':'Hà (Sử)','GDĐP':'Trúc'};   // TKB tu 26/10
+const prepOf = d => tkbVer(d).prep || PREP;
 const HDTN_T = {'Chào cờ':'Hằng (Đội)','SHL':'Kiều (GVCN)','SHCĐ':'Châu'};
 const FULL = {'Văn':'Ngữ văn','GDĐP':'GD địa phương','SHL':'Sinh hoạt lớp','SHCĐ':'SH chủ đề'};
 const SJC = {'Toán':'toan','Văn':'van','Tiếng Anh':'anh','KHTN':'khtn','LS&ĐL':'lsdl'};
@@ -1601,7 +1619,7 @@ function viewTKB(){
     <div class="tkbwrap"><table class="tkb">
       <thead><tr><th class="corner">Tiết</th>${cols.map(w=>`<th class="${PROFILE[w].english?'eng':''}${w===todayW?' now':''}">${DAYS[w]}${PROFILE[w].english?'<small>Alokiddy 20:00</small>':''}</th>`).join('')}</tr></thead>
       <tbody>${rows}
-        <tr><td class="lbl">Mang thêm</td>${cols.map(w=>`<td class="x ${PREP[w].items==='—'?'dim':''}">${esc(PREP[w].items)}</td>`).join('')}</tr>
+        <tr><td class="lbl">Mang thêm</td>${cols.map(w=>`<td class="x ${(ver.prep||PREP)[w].items==='—'?'dim':''}">${esc((ver.prep||PREP)[w].items)}</td>`).join('')}</tr>
         <tr><td class="lbl">Chiều làm SBT</td>${cols.map(w=>`<td class="x">${esc(sbt(w))}</td>`).join('')}</tr>
         <tr><td class="lbl">Buổi tối</td>${cols.map(w=>`<td class="x ${eve[w][1]||'dim'}">${esc(eve[w][0])}</td>`).join('')}</tr>
       </tbody>
