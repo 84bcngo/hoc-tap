@@ -2692,7 +2692,7 @@ async function ingestKid(){
     if (Object.keys(newSeen).length){ await metaMerge({kidSeen: newSeen}); toast('Đã nhận ' + Object.keys(newSeen).length + ' thao tác mới của con'); }
     GH.st.kidAt = stamp0();
   }catch(e){ console.error(e); }
-  KID.busy = false; render();
+  KID.busy = false; render(); if (typeof renderChat === 'function') renderChat();
 }
 async function applyKid(ev){
   const day = ev.day || String(ev.at || '').slice(0, 10) || TODAY;
@@ -2758,7 +2758,7 @@ async function kidGradeSave(evId){
 }
 function kidPanelHTML(day){
   if (S.store !== 'gh') return '';
-  const ev = KID.events.filter(e => (e.day || String(e.at).slice(0,10)) === day);
+  const ev = KID.events.filter(e => (e.day || String(e.at).slice(0,10)) === day && e.type !== 'seen');
   const tm = e => { const d = new Date(e.at); return isNaN(d) ? '' : `${d.getHours()}:${String(d.getMinutes()).padStart(2,'0')}`; };
   const MK = {ok: '✓ xong đủ', unsure: '◯ xong, chưa chắc', no: '✗ chưa làm được'};
   const line = e => e.type === 'mark' ? `${e.mark ? MK[e.mark] : '↺ bỏ đánh dấu'} – <b>${esc(e.subject || '')}</b> ${esc(clip(e.text || '', 70))}`
@@ -2853,6 +2853,96 @@ function kidModesHTML(day){
   return '<br>📱 Con nhập: ' + xs.map(e => `<b>${esc(e.subject)}</b> ${e.mode && e.mode !== 'new' ? esc(NM[e.mode] || e.mode) : 'bài ' + esc(e.lesson) + (e.pages ? ' tr.' + esc(e.pages) : '')} <span class="muted">(${hhmm(e.at)})</span>`).join(' · ');
 }
 
+/* ============ KENH CHAT BA – CON (ba 30/10) ============
+   Con nhan: su kien type 'note' trong con-ghi/ (da co). Ba nhan: kho cua con ba-ghi/YYYY-MM-DD.json {messages:[{id,at,text,from:'ba'}]}.
+   Con mo khung chat -> su kien 'seen' (upTo = gio tin cuoi cua ba) -> ba thay "Con đã xem". */
+const CHAT = {open: false, ba: {}, bsha: {}, sending: false, nKid: -1,
+  seen: (() => { try{ return localStorage.getItem('ba-chat-seen') || ''; }catch(e){ return ''; } })()};
+async function loadBa(){
+  if (S.store !== 'gh' || GH.st.status !== 'ok') return false;
+  let changed = false;
+  try{ const from = addDays(iso(new Date()), -30);
+    for (const f of (await GH.kidList('ba-ghi')).filter(f => /^\d{4}-\d{2}-\d{2}\.json$/.test(f.name) && f.name.slice(0, 10) >= from)){
+      const d = f.name.slice(0, 10); if (CHAT.bsha[d] === f.sha) continue;
+      const g = await GH.kidGet('ba-ghi/' + f.name); CHAT.ba[d] = (g.obj && g.obj.messages) || []; CHAT.bsha[d] = g.sha; changed = true; } }catch(e){ console.error(e); }
+  return changed;
+}
+const chatMsgs = () => KID.events.filter(e => e.type === 'note').map(e => ({id: e.id, at: e.at, text: e.text, from: 'con'}))
+  .concat(Object.values(CHAT.ba).flat()).sort((a, b) => String(a.at).localeCompare(String(b.at)));
+async function sendBa(text){
+  text = String(text || '').trim(); if (!text || CHAT.sending) return false;
+  const d = iso(new Date()), msg = {id: 'b' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), at: new Date().toISOString(), text, from: 'ba'};
+  CHAT.sending = true; CHAT.ba[d] = (CHAT.ba[d] || []).concat([{...msg, _pending: true}]); renderChat();
+  let ok = false;
+  for (let i = 0; i < 4 && !ok; i++){
+    try{ const g = await GH.kidGet('ba-ghi/' + d + '.json'), cur = (g.obj && g.obj.messages) || [];
+      const merged = cur.some(m => m.id === msg.id) ? cur : cur.concat([msg]);
+      CHAT.bsha[d] = await GH.kidPut('ba-ghi/' + d + '.json', {messages: merged}, g.sha, 'App ba: nhắn con'); CHAT.ba[d] = merged; ok = true; }
+    catch(e){ if (!(e.status === 409 || e.status === 422)) break; }
+  }
+  if (!ok){ CHAT.ba[d] = (CHAT.ba[d] || []).filter(m => m.id !== msg.id); toast('Chưa gửi được tin nhắn – kiểm tra mạng rồi thử lại'); }
+  CHAT.sending = false; renderChat(); return ok;
+}
+function chatRoot(){
+  let r = document.getElementById('chatRoot'); if (r) return r;
+  const css = document.createElement('style'); css.textContent = `
+  #chatFab{position:fixed;right:18px;bottom:18px;z-index:40;border:0;border-radius:99px;padding:12px 18px;background:var(--accent);color:var(--accent-ink);font:600 15px var(--f-body);box-shadow:0 6px 18px rgba(0,0,0,.18);cursor:pointer}
+  #chatFab b{display:inline-block;min-width:20px;padding:0 6px;margin-left:6px;border-radius:99px;background:var(--p1);color:#fff;font-size:12px}
+  #chatBox{position:fixed;right:18px;bottom:18px;z-index:41;width:min(400px,calc(100vw - 24px));height:min(580px,calc(100vh - 40px));background:var(--card);border:1px solid var(--line);border-radius:16px;box-shadow:0 12px 36px rgba(0,0,0,.22);display:flex;flex-direction:column;overflow:hidden}
+  #chatBox[hidden],#chatFab[hidden]{display:none}
+  #chatBox header{display:flex;align-items:center;gap:8px;padding:12px 14px;border-bottom:1px solid var(--line);font-weight:700}
+  #chatBox header button{margin-left:auto;border:0;background:none;font-size:20px;cursor:pointer;color:var(--muted)}
+  #chatList{flex:1;overflow:auto;padding:12px 14px;display:flex;flex-direction:column;gap:8px;background:var(--paper)}
+  .cm{max-width:80%;padding:8px 12px;border-radius:14px;font-size:14px;line-height:1.45;white-space:pre-wrap;word-break:break-word}
+  .cm.con{align-self:flex-start;background:var(--card);border:1px solid var(--line);border-bottom-left-radius:4px}
+  .cm.ba{align-self:flex-end;background:var(--accent);color:var(--accent-ink);border-bottom-right-radius:4px}
+  .cm small{display:block;opacity:.7;font-size:11px;margin-top:3px}
+  .cday{align-self:center;font-size:11px;color:var(--muted);margin:6px 0 2px}
+  #chatBox form{display:flex;gap:8px;padding:10px;border-top:1px solid var(--line)}
+  #chatIn{flex:1;resize:none;height:44px;border:1px solid var(--line);border-radius:10px;padding:8px 10px;font:14px var(--f-body);background:var(--paper);color:var(--ink)}
+  #chatBox form button{border:0;border-radius:10px;padding:0 16px;background:var(--accent);color:var(--accent-ink);font:600 14px var(--f-body);cursor:pointer}
+  .cquick{display:flex;gap:6px;flex-wrap:wrap;padding:0 10px 10px}
+  .cquick button{border:1px solid var(--line);background:var(--paper);border-radius:99px;padding:3px 10px;font-size:12px;cursor:pointer;color:var(--ink)}`;
+  document.head.appendChild(css);
+  r = document.createElement('div'); r.id = 'chatRoot';
+  r.innerHTML = `<button id="chatFab" type="button">💬 Nhắn con<b hidden></b></button>
+    <section id="chatBox" hidden aria-label="Trò chuyện với con"><header>💬 Trò chuyện với con <span class="small muted" id="chatSt" style="font-weight:400"></span><button type="button" data-c="close" aria-label="Đóng">×</button></header>
+      <div id="chatList"></div>
+      <div class="cquick">${['Ba đã xem bài, con làm tốt lắm! 👍', 'Con nghỉ giải lao 10 phút rồi làm tiếp nhé.', 'Câu đó để tối ba con mình cùng xem.', 'Con nhớ soạn cặp trước 18:00 nhé.'].map(x => `<button type="button" data-q="${esc(x)}">${esc(x.length > 26 ? x.slice(0, 24) + '…' : x)}</button>`).join('')}</div>
+      <form><textarea id="chatIn" placeholder="Nhắn cho con… (Enter để gửi, Shift+Enter xuống dòng)"></textarea><button type="submit">Gửi</button></form></section>`;
+  document.body.appendChild(r);
+  const fab = r.querySelector('#chatFab'), box = r.querySelector('#chatBox'), inp = r.querySelector('#chatIn');
+  const open = v => { CHAT.open = v; box.hidden = !v; fab.hidden = v; if (v){ CHAT.seen = new Date().toISOString(); try{ localStorage.setItem('ba-chat-seen', CHAT.seen); }catch(e){} chatSync(); setTimeout(() => inp.focus(), 50); } renderChat(); };
+  fab.onclick = () => open(true);
+  r.querySelector('[data-c=close]').onclick = () => open(false);
+  r.querySelectorAll('[data-q]').forEach(b => b.onclick = () => { inp.value = b.dataset.q; inp.focus(); });
+  const send = async () => { const v = inp.value; if (!v.trim()) return; inp.value = ''; if (!(await sendBa(v))) inp.value = v; };
+  r.querySelector('form').onsubmit = e => { e.preventDefault(); send(); };
+  inp.onkeydown = e => { if (e.key === 'Enter' && !e.shiftKey){ e.preventDefault(); send(); } };
+  return r;
+}
+function renderChat(){
+  if (S.store !== 'gh' || GH.st.status !== 'ok') return;
+  const r = chatRoot(), list = r.querySelector('#chatList'), badge = r.querySelector('#chatFab b');
+  const ms = chatMsgs(), kidN = ms.filter(m => m.from === 'con').length;
+  const unread = CHAT.open ? 0 : ms.filter(m => m.from === 'con' && m.at > CHAT.seen).length;
+  badge.hidden = !unread; badge.textContent = unread;
+  if (CHAT.nKid >= 0 && kidN > CHAT.nKid && !CHAT.open){ const last = ms.filter(m => m.from === 'con').pop(); if (last && typeof toast === 'function') toast('💬 Con nhắn: ' + last.text.slice(0, 60)); }
+  CHAT.nKid = kidN;
+  if (!CHAT.open) return;
+  const seenAt = KID.events.filter(e => e.type === 'seen').map(e => e.upTo || '').sort().pop() || '';
+  const lastBa = [...ms].reverse().find(m => m.from === 'ba');
+  let prevD = '';
+  const atBottom = list.scrollHeight - list.scrollTop - list.clientHeight < 40;
+  list.innerHTML = ms.length ? ms.map(m => { const d = new Date(m.at), dd = iso(d), head = dd !== prevD ? `<div class="cday">${DAYS[d.getDay()]} ${d.getDate()}/${d.getMonth() + 1}</div>` : ''; prevD = dd;
+    return head + `<div class="cm ${m.from}">${esc(m.text)}<small>${m.from === 'con' ? 'Con' : 'Ba'} · ${hhmm(m.at)}${m._pending ? ' · đang gửi…' : ''}${m === lastBa && seenAt && seenAt >= m.at ? ' · ✓ con đã xem' : ''}</small></div>`; }).join('')
+    : '<p class="small muted" style="text-align:center;margin-top:30px">Chưa có tin nhắn. Con nhắn ở mục "Nhắn ba" trên app của con.</p>';
+  r.querySelector('#chatSt').textContent = GH.st.kidAt ? '· cập nhật ' + GH.st.kidAt : '';
+  if (atBottom || !list.dataset.init){ list.scrollTop = list.scrollHeight; list.dataset.init = 1; }
+}
+async function chatSync(){ await Promise.all([ingestKid(), loadBa()]); renderChat(); }
+setInterval(() => { if (CHAT.open) chatSync(); }, 15000);
+
 /* ============ KET NOI ============ */
 async function loadKeys(){
   if (!S.db || S.keysBusy) return; S.keysBusy = true;
@@ -2870,9 +2960,9 @@ render();
   if (!db){ let useFile = false; try{ useFile = localStorage.getItem('tro-ly-6a14-store') === 'file'; }catch(e){}
     if (useFile){ db = await LOCAL.start(); S.local = true; S.store = 'file'; LOCAL.onReload = () => { S.keysAt = 0; loadKeys(); }; }
     else { db = await GH.start(); S.local = true; S.store = 'gh'; GH.onReload = () => { S.keysAt = 0; loadKeys(); };
-      GH.onChange = () => schedulePublish(); GH.onPoll = () => ingestKid();
+      GH.onChange = () => schedulePublish(); GH.onPoll = () => { ingestKid(); loadBa().then(renderChat); };
       if (GH.st.status !== 'ok'){ S.db = db; S.dbState = 'ok'; render(); await new Promise(r => { const iv = setInterval(() => { if (GH.st.status === 'ok'){ clearInterval(iv); r(); } }, 500); }); }
-      setTimeout(() => { ingestKid(); schedulePublish(0); }, 4000); } }   // chay tren may: du lieu trong file JSON
+      setTimeout(() => { ingestKid(); loadBa().then(renderChat); schedulePublish(0); }, 4000); } }   // chay tren may: du lieu trong file JSON
   if (!db){ S.dbState = 'none'; render(); return; }
   S.db = db; S.dbState = 'ok';
   // Chi tu tao bai (no bai cu / bai bi sot) khi du lieu da tai day du tu may chu – tranh tao trung khi moi co mot phan (ba 28/10)
