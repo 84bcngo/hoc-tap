@@ -138,6 +138,13 @@ textarea{width:100%;min-height:120px;resize:vertical;line-height:1.5}
 .filters{display:flex;gap:6px;flex-wrap:wrap}
 .filters button{border:1px solid var(--line);background:var(--card);border-radius:99px;padding:6px 12px;font:600 13px var(--f-body);color:var(--muted);cursor:pointer}
 .filters button[aria-pressed="true"]{background:var(--ink);color:var(--card);border-color:var(--ink)}
+.sjf button{font-size:12.5px;padding:5px 11px}
+.tkgrp{border:1px solid var(--line);border-radius:14px;padding:4px 12px 10px;margin-top:12px}
+.tkgrp>summary{cursor:pointer;font:700 15px var(--f-body);padding:8px 0;list-style:none}
+.tkgrp>summary::before{content:'▸ ';color:var(--muted)}.tkgrp[open]>summary::before{content:'▾ '}
+.tkitem{border-top:1px dashed var(--line);padding-top:6px;margin-top:6px}.tkitem:first-of-type{border-top:0}
+input.pending{outline:2px dashed var(--p2);outline-offset:1px}
+.flash{animation:tkfl 2.5s ease-out}@keyframes tkfl{0%,30%{background:#fff3b0}100%{background:transparent}}
 .tablewrap{overflow-x:auto}
 table{border-collapse:collapse;width:100%;font-size:13.5px;font-variant-numeric:tabular-nums}
 th,td{padding:7px 8px;border-bottom:1px solid var(--line);text-align:left;white-space:nowrap}
@@ -1394,7 +1401,14 @@ function viewTasks(){
   if (f==='debt') list = list.filter(t=>isDebt(t,day));
   if (f==='backlog') list = list.filter(t=>t.backlog && isOpen(t));
   if (f==='done') list = list.filter(t=>t.status==='done'||t.status==='dropped');
-  list.sort(f==='backlog' ? (a,b)=>String(a.planDay||'9').localeCompare(String(b.planDay||'9')) || a.subject.localeCompare(b.subject) || (srcRank(a)-srcRank(b)) : f==='done' ? (a,b)=>String(b.doneAt||'').localeCompare(String(a.doneAt||'')) : byPrio(day));
+  // ba 30/10: loc theo mon + thu tu on dinh (ngay giao chieu -> han nop -> nguon -> id) de bai khong nhay khi sua
+  const sjCount = {}; list.forEach(t => { sjCount[t.subject] = (sjCount[t.subject]||0) + 1; });
+  const sjF = S.sjF && sjCount[S.sjF] ? S.sjF : '';
+  if (sjF) list = list.filter(t => t.subject===sjF);
+  const stable = (a,b) => String(a.planDay||a.due||'9').localeCompare(String(b.planDay||b.due||'9')) || String(a.due||'9').localeCompare(String(b.due||'9')) || (srcRank(a)-srcRank(b)) || String(a.id).localeCompare(String(b.id));
+  list.sort(f==='done' ? (a,b)=>String(b.doneAt||'').localeCompare(String(a.doneAt||'')) || String(a.id).localeCompare(String(b.id)) : stable);
+  const sjOrder = Object.keys(sjCount).sort((a,b) => (SUBJECTS.indexOf(a)+1||99) - (SUBJECTS.indexOf(b)+1||99) || a.localeCompare(b));
+  const sjBar = sjOrder.length > 1 ? `<div class="filters sjf" role="group" aria-label="Lọc môn" style="margin-top:8px"><button data-act="sjF" data-v="" aria-pressed="${!sjF}">Tất cả môn · ${Object.values(sjCount).reduce((n,x)=>n+x,0)}</button>${sjOrder.map(sj => `<button data-act="sjF" data-v="${esc(sj)}" aria-pressed="${sjF===sj}">${esc(sj)} · ${sjCount[sj]}</button>`).join('')}</div>` : '';
   const counts = {backlog:S.tasks.filter(t=>t.backlog&&isOpen(t)).length, open:S.tasks.filter(t=>isOpen(t)&&!t.backlog).length, debt:S.tasks.filter(t=>isDebt(t,day)).length, done:S.tasks.filter(t=>!isOpen(t)).length, all:S.tasks.length};
   const edit = t => `<div class="grid2" style="margin-top:4px">
       <label class="f">Môn<select data-edit="subject" data-id="${t.id}">${SUBJECTS.map(s=>`<option ${s===t.subject?'selected':''}>${s}</option>`).join('')}</select></label>
@@ -1408,8 +1422,29 @@ function viewTasks(){
   return `<div class="stack"><section class="card">
     <p class="small muted" style="margin:0 0 8px">Tab này chỉ có bài ba đã nhập. Bài có nhãn <b>TỰ ĐỘNG</b> (SGK/SBT theo TKB) chỉ hiện ở trang Hôm nay – bỏ bằng nút "✕ Bỏ bài này" ngay dưới bài.</p>
     <div class="filters" role="group" aria-label="Lọc">${[['open','Đang mở'],['debt','Nợ'],['backlog','Nợ bài cũ'],['done','Đã xong'],['all','Tất cả']].map(([k,n])=>`<button data-act="filter" data-v="${k}" aria-pressed="${f===k}">${n} · ${counts[k]}</button>`).join('')}</div>
-    <div class="tlist" style="margin-top:12px">${(f==='open'||f==='debt')?'<p class="small muted">Ô "Giao chiều": chọn ngày con làm bài này – bài sẽ ẩn trước ngày đó và hiện trong tin nhắn chiều hôm đó (kể cả hôm đó không có tiết môn này). Để trống = app tự xếp vào chiều trước buổi học theo TKB.</p>':''}${f==='backlog'?'<p class="small muted">Chọn ngày ở ô "Giao chiều" để bài hiện trong tin nhắn của ngày đó (mục 🔁 Nợ bài cũ). Bài chưa làm xong sẽ tiếp tục hiện các ngày sau.</p>':''}${list.length ? list.map(t=>`<div>${taskHTML(t,day)}${isOpen(t)?`<div class="row small" style="padding:6px 4px 0"><label class="muted">Giao chiều <input type="date" data-edit="planDay" data-id="${t.id}" value="${esc(t.planDay||'')}"></label>${t.planDay?`<span class="muted">→ hiện trong tin nhắn chiều ${fmt(t.planDay)}${t.backlog?'':' (trước ngày này ẩn)'}</span><button class="btn ghost" style="padding:2px 8px;font-size:12px" data-act="clearPlan" data-id="${t.id}">Theo TKB</button>`:(t.backlog?'':'<span class="muted">để trống = tự xếp theo TKB</span>')}</div>`:''}<div style="padding:4px 4px 0"><button class="btn ghost small" style="padding:4px 10px;font-size:12.5px" data-act="edit" data-id="${t.id}">${S.editId===t.id?'Đóng':'Sửa'}</button>${S.editId===t.id?edit(t):''}</div></div>`).join('') : '<p class="empty">Không có bài nào trong mục này.</p>'}</div>
+    ${sjBar}
+    <div class="tlist" style="margin-top:12px">${(f==='open'||f==='debt')?'<p class="small muted">Ô "Giao chiều": chọn ngày con làm bài này – bài sẽ ẩn trước ngày đó và hiện trong tin nhắn chiều hôm đó (kể cả hôm đó không có tiết môn này). Để trống = app tự xếp vào chiều trước buổi học theo TKB.</p>':''}${f==='backlog'?'<p class="small muted">Chọn ngày ở ô "Giao chiều" để bài hiện trong tin nhắn của ngày đó (mục 🔁 Nợ bài cũ). Bài chưa làm xong sẽ tiếp tục hiện các ngày sau.</p>':''}${list.length ? tkGroups(list, sjF, t=>`<div class="tkitem${t.id===S.flashId?' flash':''}" ${t.id===S.flashId?'id="flashT"':''}>${taskHTML(t,day)}${isOpen(t)?`<div class="row small" style="padding:6px 4px 0"><label class="muted">Giao chiều <input type="date" data-edit="planDay" data-id="${t.id}" value="${esc(t.planDay||'')}"></label>${t.planDay?`<span class="muted">→ hiện trong tin nhắn chiều ${fmt(t.planDay)}${t.backlog?'':' (trước ngày này ẩn)'}</span><button class="btn ghost" style="padding:2px 8px;font-size:12px" data-act="clearPlan" data-id="${t.id}">Theo TKB</button>`:(t.backlog?'':'<span class="muted">để trống = tự xếp theo TKB</span>')}</div>`:''}<div style="padding:4px 4px 0"><button class="btn ghost small" style="padding:4px 10px;font-size:12.5px" data-act="edit" data-id="${t.id}">${S.editId===t.id?'Đóng':'Sửa'}</button>${S.editId===t.id?edit(t):''}</div></div>`) : '<p class="empty">Không có bài nào trong mục này.</p>'}</div>
   </section></div>`;
+}
+
+// Nhom bai theo mon (moi mon 1 khung thu gon duoc); dang loc 1 mon thi hien thang danh sach
+function tkGroups(list, sjF, one){
+  if (sjF) return list.map(one).join('');
+  const by = {}; list.forEach(t => (by[t.subject] = by[t.subject] || []).push(t));
+  return Object.keys(by).sort((a,b) => (SUBJECTS.indexOf(a)+1||99) - (SUBJECTS.indexOf(b)+1||99) || a.localeCompare(b)).map(sj => { const ok = 'tk|' + sj;
+    return `<details class="tkgrp" data-openk="${esc(ok)}" ${S.openK[ok]===false?'':'open'}><summary>${esc(sj)} <span class="small muted">· ${by[sj].length} bài</span></summary>${by[sj].map(one).join('')}</details>`; }).join('');
+}
+// O ngay (Giao chieu / Han nop): cho go xong moi luu – roi o hoac dung tay 1,5 giay; nam phai du 4 so
+const DATE_ED = {};
+function dateEdit(el){
+  const d = el.dataset, k = d.id + '|' + d.edit; clearTimeout(DATE_ED[k]); el.classList.add('pending');
+  const go = async () => { if (!DATE_ED[k]) return; clearTimeout(DATE_ED[k]); delete DATE_ED[k]; el.classList.remove('pending');
+    const v = el.value; if (v && !/^20\d\d-\d\d-\d\d$/.test(v)) return;
+    const t = S.tasks.find(x => x.id===d.id); if (!t || (t[d.edit]||'')===v) return;
+    S.flashId = d.id; try{ await updTask(d.id, {[d.edit]: v}); }catch(x){ fail(x); }
+    setTimeout(() => { const x = document.getElementById('flashT'); if (x) x.scrollIntoView({block:'center', behavior:'smooth'}); }, 400);
+    setTimeout(() => { if (S.flashId===d.id) S.flashId = null; }, 4000); };
+  DATE_ED[k] = setTimeout(go, 1500); el.onblur = go;
 }
 
 /* ============ TAB 4: TUAN ============ */
@@ -2115,7 +2150,8 @@ app.addEventListener('change', async e => {
   if (d.man){ S.manual[d.man] = el.type==='checkbox' ? el.checked : el.value; if (el.type!=='text') render(); }
   if (d.log && el.tagName==='SELECT') S.logDraft[S.cur][d.log] = el.value;
   if (d.act==='cause'){ try{ await updTask(d.id,{cause: el.value||null}); }catch(x){ fail(x); } }
-  if (d.edit){ const v = el.type==='checkbox' ? el.checked : el.value; try{ await updTask(d.id,{[d.edit]: el.type==='checkbox' ? v : (v || (d.edit==='prio'?null:v))}); }catch(x){ fail(x); } }
+  if (d.edit && el.type==='date' && S.tab==='tasks') dateEdit(el);
+  else if (d.edit){ const v = el.type==='checkbox' ? el.checked : el.value; try{ await updTask(d.id,{[d.edit]: el.type==='checkbox' ? v : (v || (d.edit==='prio'?null:v))}); }catch(x){ fail(x); } }
   if (d.act==='img'){ S.img = el.files && el.files[0] || null; render(); }
   if (d.prow!=null && el.type==='checkbox'){ S.progRows[+d.prow].use = el.checked; }
   if (d.srow!=null){ S.sbtRows[+d.srow].use = el.checked; }
@@ -2165,6 +2201,7 @@ app.addEventListener('click', async e => {
       const k = monday(S.cur);
       try{ await setDoc('reviews', k, {...S.revDraft[k], week:k}); toast('Đã lưu Weekly Review'); }catch(x){ fail(x); } break; }
     case 'filter': S.filter = d.v; render(); break;
+    case 'sjF': S.sjF = d.v; render(); break;
     case 'edit': S.editId = S.editId===d.id ? null : d.id; S.confirmDel=null; render(); break;
     case 'askDel': S.confirmDel = d.id; render(); break;
     case 'cancelDel': S.confirmDel = null; render(); break;
