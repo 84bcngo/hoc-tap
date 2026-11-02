@@ -552,6 +552,8 @@ function sbtPlan1(sj, pl, book, part, prX, sel){
   const wrong = Object.keys(st).filter(e => st[e]==='w');
   return wrong.length ? `${head}: làm lại câu sai ${wrong.join(', ')}` + when : false;
 }
+// Loai muc trong sach: '12' -> '#', 'U3' -> 'U#', 'RV1' -> 'RV#' – muc khac loai ngay sau bai = on tap / luyen tap kem bai do
+const lessonKind = no => String(no).replace(/\d+/g, '#');
 function reviewPlan(sj){
   if (sj==='Toán') return examParts(sj).flatMap(pt => reviewPlan1(sj, lastProgress(sj, '9999-12-31', pt).pr, pt));
   return reviewPlan1(sj, lastProgress(sj, '9999-12-31').pr, '');
@@ -561,7 +563,7 @@ function reviewPlan1(sj, pr, pt){
   return booksOf(sj).map(book => {
     const cat = catOf(sj, book), L0 = findLesson(cat, pr.lesson); if (!L0) return null;
     const idx = cat.lessons.indexOf(L0), cur = L0;
-    let end = idx+1; while (end < cat.lessons.length && !/^\d/.test(String(cat.lessons[end].no)) && (!cur.chapter || cat.lessons[end].chapter===cur.chapter)) end++;   // kem luyen tap chung / on tap chuong ngay sau
+    let end = idx+1; while (end < cat.lessons.length && lessonKind(cat.lessons[end].no) !== lessonKind(L0.no) && (!cur.chapter || cat.lessons[end].chapter===cur.chapter)) end++;   // kem luyen tap chung / on tap chuong ngay sau
     let scope = cat.lessons.slice(0, end).filter(l=> cur.chapter ? l.chapter===cur.chapter : true);
     if (!cur.chapter) scope = scope.slice(-4);
     const parts = scope.map(l => (l.ex||[]).length ? `${/^\d/.test(String(l.no))?'Bài '+l.no:l.title}: ${(l.ex||[]).slice(0,2).join(', ')}` : (/luyện tập|cuối chương|ôn tập/i.test(l.title||'') ? `${l.title} (${lessonPages(l)})` : null)).filter(Boolean);
@@ -1708,7 +1710,7 @@ function examScope(sj, book){
     const ls = cat.lessons.filter(l => partOf(sj, l.no)===pt); return ls.slice(0, ls.indexOf(L0)+1).slice(-3); });
   const chap = pr => { const L0 = pr && findLesson(cat, pr.lesson); if (!L0) return [];
     const idx = cat.lessons.indexOf(L0);
-    let end = idx+1; while (end < cat.lessons.length && !/^\d/.test(String(cat.lessons[end].no)) && (!L0.chapter || cat.lessons[end].chapter===L0.chapter)) end++;
+    let end = idx+1; while (end < cat.lessons.length && lessonKind(cat.lessons[end].no) !== lessonKind(L0.no) && (!L0.chapter || cat.lessons[end].chapter===L0.chapter)) end++;
     return cat.lessons.slice(0, end).filter(l => L0.chapter ? l.chapter===L0.chapter : true); };
   // Toan: on dung phan cua bai kiem tra (Hinh hoc / So hoc), moi phan theo chuong cua bai gan nhat thuoc phan do
   if (sj==='Toán') return examParts(sj).flatMap(pt => chap(lastProgress(sj, '9999-12-31', pt).pr));
@@ -1801,7 +1803,8 @@ const whyHTML = a => a && a.why ? `<div class="why">💡 <b>Vì sao:</b> ${esc(a
 const segGrade = (kid, ex, ck) => { const w=(ck.wrong||[]).includes(ex), o=(ck.ok||[]).includes(ex); return `<div class="seg"><button data-act="grade" data-k="${kid}" data-ex="${esc(ex)}" data-v="ok" aria-pressed="${o}" aria-label="Đúng ${esc(ex)}"><span class="dot done"></span></button><button data-act="grade" data-k="${kid}" data-ex="${esc(ex)}" data-v="wrong" aria-pressed="${w}" aria-label="Sai ${esc(ex)}"><span class="dot help"></span></button></div>`; };
 function gradeParts(day){
   const tg = gradeTargets(day, true);
-  const have = tg.filter(x => x.key), miss = tg.filter(x => !x.key && (x.current || !/^\d/.test(String(x.L.no))));
+  const dcSj = new Set(tg.filter(x => x.key && /-decuong-/.test(x.id)).map(x => x.sj));
+  const have = tg.filter(x => x.key), miss = tg.filter(x => !x.key && (x.current || (!/^\d/.test(String(x.L.no)) && !dcSj.has(x.sj))));
   const allWrong = [];
   const block = x => {
     const k = x.key, ck = S.checks[day+'_'+x.id] || {wrong:[], ok:[]};
