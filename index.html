@@ -167,6 +167,10 @@ textarea{min-height:70px;resize:vertical}
 .mode[aria-pressed="true"]{border-color:var(--violet);background:var(--violet-soft);color:var(--violet)}
 .mode.off[aria-pressed="true"]{border-color:var(--no);background:var(--no-soft);color:var(--no)}
 
+/* ---- giai thich bai on (ba 2/11) ---- */
+.explain{margin-top:8px;padding:9px 12px;border-radius:12px;background:var(--paper);border:1.5px dashed var(--line);display:flex;flex-direction:column;gap:4px;font-size:14px}
+.kwline{color:var(--ink)}
+mark.kwm{background:#ffe066;color:inherit;border-radius:4px;padding:0 3px;font-weight:700}
 /* ---- nhan ba ---- */
 .chatp{display:flex;flex-direction:column;height:100%;min-height:0}
 /* ba 2/11: Nhan ba dang cua so noi goc duoi ben trai */
@@ -577,6 +581,10 @@ function quizResultHTML(qz, ev, n){
   const r = pct(ev.got, ev.max), face = r >= 80 ? '🌟' : r >= 50 ? '💪' : '📚';
   const tq = (ev.texts || []);
   const tDone = tq.filter(t => gs[t.qid]).length;
+  let X = null; if (qz.explain){ try{ X = unhide(qz.sec); }catch(e){} }   // ba 2/11: bai co giai thich day du sau khi nop
+  const hlP = (txt, hl) => { let s = esc(txt); (hl || []).slice().sort((a, b) => b.length - a.length).forEach(w => { const e = esc(w).replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); s = s.replace(new RegExp('(^|[^\\p{L}])(' + e + ')(?![\\p{L}])', 'giu'), '$1<mark class="kwm">$2</mark>'); }); return s; };
+  const rightOf = q => { const a = X.ans[q.id]; return (Array.isArray(a) ? a : [a]).map(k => k + '. ' + ((q.opts.find(x => x.k === k) || {}).t || '')).join(' / '); };
+  const explainHTML = q => { const k = (X.kw || {})[q.id] || {}; return `<div class="explain"><div><b>Đáp án:</b> ${esc(rightOf(q))}</div>${k.kw ? `<div class="kwline">🔑 <b>Từ khóa:</b> ${esc(k.kw)}</div>` : ''}${X.why[q.id] ? `<div class="small">💡 <b>Vì sao:</b> ${esc(X.why[q.id])}</div>` : ''}</div>`; };
   return `<div class="panel"><div class="score">
       <div class="ring" style="--p:${r}"><b>${ev.got}/${ev.max}</b><span>ý đúng</span></div>
       <div><h2>${face} ${r >= 80 ? 'Giỏi lắm!' : r >= 50 ? 'Khá rồi, sửa nốt câu sai nhé!' : 'Đọc lại kiến thức rồi làm lại câu sai nhé!'}</h2>
@@ -584,6 +592,7 @@ function quizResultHTML(qz, ev, n){
         ${tq.length ? `<p class="small">${tDone ? `Ba đã chấm ${tDone}/${tq.length} câu tự luận: <b>${tq.filter(t => gs[t.qid] === 'dat').length} đạt</b>.` : `${tq.length} câu tự luận: máy đã dò ý chính, <b>ba sẽ chấm tối nay</b>.`}</p>` : ''}
         ${G.comment ? `<p class="small"><b>Ba nhận xét:</b> ${esc(G.comment)}</p>` : ''}
       </div></div>
+    ${X ? `<p class="small" style="margin:10px 0 0">🔎 Mỗi câu có <mark class="kwm">từ khóa</mark> được tô vàng trong đề và dòng 🔑 giải thích vì sao chọn đáp án đó. Tối con mở lại trang này để dò cùng ba.</p>` : ''}
     <div class="actions">${(ev.wrong || []).length ? `<button class="btn" data-act="qRetry">🔁 Làm lại ${ev.wrong.length} câu sai</button>` : '<span class="ok-note">Không còn câu trắc nghiệm nào sai 🎉</span>'}<button class="btn line" data-act="qAgain">↺ Làm lại cả bài</button><button class="btn soft" data-tab="know">💡 Xem lại kiến thức</button></div></div>
     ${qz.sections.map(s => `<section class="qsec"><h3 class="qst">${esc(s.title)}</h3><div class="qlist">${s.qs.map(q => {
       const d = det[q.id], tx = tq.find(t => t.qid === q.id);
@@ -593,8 +602,9 @@ function quizResultHTML(qz, ev, n){
           <div class="model"><b>Gợi ý đáp án:</b> ${esc(tx ? tx.model : '')}</div></div>`; }
       const ok = !d;
       return `<div class="qcard ${ok ? 'good' : 'bad'}"><div class="qlab"><b>${esc(q.label)}</b> ${ok ? '<span class="chip" style="background:var(--ok-soft);color:var(--ok)">✓ Đúng</span>' : `<span class="chip" style="background:var(--no-soft);color:var(--no)">✗ ${d.got}/${d.max}</span>`}</div>
-        <div class="qp">${esc(q.prompt)}</div>
-        ${ok ? '' : `<div class="yours"><b>${q.type === 'text' ? 'Con viết' : 'Con chọn'}:</b> ${esc(d.yours || '(bỏ trống)')}</div><div class="model"><b>Đáp án:</b> ${esc(d.right)}${d.why ? `<br><span class="small">${esc(d.why)}</span>` : ''}</div>`}</div>`;
+        ${X && q.type === 'mcq' ? `<div class="qp">${hlP(q.prompt, ((X.kw || {})[q.id] || {}).hl)}</div>${ok ? '' : `<div class="yours"><b>Con chọn:</b> ${esc(d.yours || '(bỏ trống)')}</div>`}${explainHTML(q)}</div>` :
+        `<div class="qp">${esc(q.prompt)}</div>
+        ${ok ? '' : `<div class="yours"><b>${q.type === 'text' ? 'Con viết' : 'Con chọn'}:</b> ${esc(d.yours || '(bỏ trống)')}</div><div class="model"><b>Đáp án:</b> ${esc(d.right)}${d.why ? `<br><span class="small">${esc(d.why)}</span>` : ''}</div>`}</div>`}`;
     }).join('')}</div></section>`).join('')}`;
 }
 function submitQuiz(force){
