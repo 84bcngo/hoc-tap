@@ -246,12 +246,30 @@ const PREP_V7 = {
   5:{items:'Đồ dùng Mĩ thuật',focus:'Tiếng Anh, Toán – 2 tiết'},
   6:{items:'—',focus:'Văn – 2 tiết, LS&ĐL – 2 tiết'}
 };
+const TKB_V8 = {   // truong ghi 'So 7', ap dung tu 9/11/2026
+  1: [{s:'SH',l:'Chào cờ'},{s:'HĐTN',l:'SHCĐ'},{s:'KHTN'},{s:'Tiếng Anh'},{s:'Mĩ thuật'}],
+  2: [{s:'Toán'},{s:'Toán'},{s:'GDCD'},{s:'LS&ĐL'},{s:'Công nghệ'}],
+  3: [{s:'Thể dục'},{s:'Thể dục'},{s:'GDĐP'},{s:'LS&ĐL'},{s:'Tiếng Anh'}],
+  4: [{s:'Văn'},{s:'Văn'},{s:'Toán'},{s:'LS&ĐL'},{s:'KHTN'}],
+  5: [{s:'Văn'},{s:'Văn'},{s:'Tiếng Anh'},{s:'Toán'},{s:'SH',l:'SHL'}],
+  6: [{s:'KHTN'},{s:'KHTN'},{s:'Tin học'},{s:'Âm nhạc'}]
+};
+const PREP_V8 = {
+  1:{items:'Đồng phục chào cờ, đồ dùng Mĩ thuật',focus:'KHTN, Tiếng Anh, Mĩ thuật'},
+  2:{items:'Sách GDCD, Công nghệ',focus:'Toán – 2 tiết, GDCD, LS&ĐL, Công nghệ'},
+  3:{items:'Đồ thể dục, bình nước, sách GDĐP',focus:'GDĐP, LS&ĐL, Tiếng Anh'},
+  4:{items:'—',focus:'Văn – 2 tiết, Toán, LS&ĐL, KHTN'},
+  5:{items:'—',focus:'Văn – 2 tiết, Tiếng Anh, Toán'},
+  6:{items:'Sách Tin học, Âm nhạc',focus:'KHTN – 2 tiết, Tin học, Âm nhạc'}
+};
+const TEACH8 = {'Văn':'Linh','Tin học':'Bảo','LS&ĐL':'Hà (Sử)','GDĐP':'Trúc','Chào cờ':'Hằng (Đội)','SHL':'Linh (GVCN)','SHCĐ':'Linh'};   // TKB tu 9/11 – GVCN co Linh
 const TKB_LIST = [
   {from:'2026-09-28', no:3, t:TKB_V3, shift:{5:{'Tin học':2}}},
   {from:'2026-10-05', no:4, t:TKB_V4, shift:{}},
-  {from:'2026-10-19', no:5, t:TKB_V5, shift:{}},
-  {from:'2026-10-26', no:6, t:TKB_V6, shift:{}},   // ba 7/10: bai chi giao vao chieu truoc buoi hoc theo TKB (bo lam som Anh tu T3)
-  {from:'2026-11-02', no:7, t:TKB_V7, shift:{}, prep:PREP_V7}   // truong ghi 'So 6'
+  {from:'2026-10-19', no:5, name:'4b', t:TKB_V5, shift:{}},
+  {from:'2026-10-26', no:6, name:'5', t:TKB_V6, shift:{}},   // ba 7/10: bai chi giao vao chieu truoc buoi hoc theo TKB (bo lam som Anh tu T3)
+  {from:'2026-11-02', no:7, name:'6', t:TKB_V7, shift:{}, prep:PREP_V7},   // truong ghi 'So 6'
+  {from:'2026-11-09', no:8, name:'7', t:TKB_V8, shift:{}, prep:PREP_V8, teach:TEACH8}   // truong ghi 'So 7'
 ];
 const tkbVer = d => { let v = TKB_LIST[0]; for (const x of TKB_LIST) if (d >= x.from) v = x; return v; };
 // Ngay nghi dot xuat (ba nhap o tab TKB, luu meta.offDays {ngay: ly do}): ngay do khong co tiet nao
@@ -813,6 +831,7 @@ const partName = p => p==='LS' ? 'Lịch sử' : p==='DL' ? 'Địa lí' : p==='
 // Cac phan cua mon sj hoc trong ngay d (Toan TKB moi: thu Sau co ca Hinh hoc va So hoc)
 function dayParts(sj, d){
   if (sj==='Toán'){ const on = S.progress.filter(p => p.subject===sj && p.date===d && p.lesson); if (on.length) return [...new Set(on.map(p => partOf(sj, p.lesson)).filter(Boolean))];
+    if (d >= '2026-11-09') return dow(d)===2 ? ['HH','SH'] : ['SH'];   // ba 8/11: TKB so 7 – T3 2 tiet Toan
     if (dow(d)===5) return d >= '2026-10-26' ? ['HH','SH'] : ['HH']; return ['SH']; }
   return [dayPart(sj, d)];
 }
@@ -1189,7 +1208,7 @@ function childMessage0(day){
   if (pf.english) L.push('[[blue|⏰ Tối nay con học Alokiddy online (20:00–21:00)]], nên cần cố gắng **làm xong hết bài tập ngay trong buổi chiều** và soạn cặp trước 18:00 nhé.');
   if (w===6) L.push('[[blue|📌 Giao ước: chiều thứ Bảy học xong bài nộp thứ Hai]] để Chủ nhật được nghỉ trọn vẹn.');
   if (w===0){ const sunPlan = S.tasks.filter(t => isOpen(t) && t.planDay===day).map(t => t.subject).filter((v,i,a) => a.indexOf(v)===i);   // ba xep viec rieng cho Chu nhat (vd on thi tuan thi)
-    L.push(sunPlan.length ? `[[blue|🌿 Chủ nhật: chỉ ôn ${sunPlan.join(', ')} (buổi ôn ba đã xếp)]], làm xong là nghỉ. Bài còn thiếu cho thứ Hai làm nốt nếu có.` : '🌿 Chủ nhật nghỉ. Chỉ làm nếu còn bài chưa xong cho thứ Hai.'); }
+    L.push(sunPlan.length ? `[[blue|🌿 Chủ nhật: làm bài ba đã xếp – ${sunPlan.join(', ')}]], làm xong là nghỉ. Bài còn thiếu cho thứ Hai làm nốt nếu có.` : '🌿 Chủ nhật nghỉ. Chỉ làm nếu còn bài chưa xong cho thứ Hai.'); }
   // Dong dau ngan gon: mai nop mon nao, mai / sap kiem tra mon nao
   const exTs = S.tasks.filter(t => examActive(t, day)).sort((a,b) => String(a.due).localeCompare(String(b.due)));
   const exName = t => t.part==='LS' ? 'Lịch sử' : t.part==='DL' ? 'Địa lí' : t.subject==='Toán' && examPartOf('Toán', t) ? 'Toán ' + partName(examPartOf('Toán', t)) : t.subject;
@@ -1363,7 +1382,7 @@ function rowHTML(r,i){
 function viewAdd(){
   const m = S.manual, mp = prioOf({...m, due: m.due || nextLesson(m.subject,S.cur)}, S.cur);
   return `<div class="stack">
-  <section class="card">
+  ${S.sample ? `  <section class="card">
     <div class="eyebrow">Từ Zalo lớp</div>
     <h2>Dán tin nhắn của cô, Claude tách thành từng bài</h2>
     ${S.sample===null ? '<p class="warn">Tính năng đọc tin không dùng được ở chế độ xem này. Dùng phần nhập tay bên dưới.</p>' : ''}
@@ -1373,7 +1392,7 @@ function viewAdd(){
     ${S.parseErr?`<p class="warn" style="margin-top:10px">${esc(S.parseErr)}</p>`:''}
     ${S.progRows.length?`<h3>Tiến độ học hôm nay (từ sổ ghi chú)</h3><div class="tlist">${S.progRows.map((r,i)=>`<div class="prow" style="grid-template-columns:auto 1fr 1fr 1fr"><input type="checkbox" aria-label="Chọn" data-prow="${i}" data-k="use" ${r.use?'checked':''}><b>${esc(r.subject)}</b><label class="small muted">Bài <input type="text" data-prow="${i}" data-k="lesson" value="${esc(r.lesson)}" style="width:70px"></label><label class="small muted">Trang <input type="text" data-prow="${i}" data-k="pages" value="${esc(r.pages)}" style="width:100px"></label>${r.part||r.done===false?`<div class="full small muted">${esc(r.part)}${r.done===false?" · chưa học hết bài":""}</div>`:""}</div>`).join('')}</div>${S.rows.length?'':'<div class="row" style="margin-top:10px"><button class="btn" data-act="saveRows">Lưu tiến độ</button><button class="btn ghost" data-act="clearRows">Huỷ</button></div>'}`:''}
     ${S.rows.length?`<h3>Kiểm tra lại trước khi lưu</h3><p class="small muted">Hạn nộp để trống sẽ tự điền theo buổi học kế tiếp của môn trong TKB. Bỏ tick những dòng không cần.</p><div class="tlist">${S.rows.map(rowHTML).join('')}</div><div class="row" style="margin-top:10px"><button class="btn" data-act="saveRows">Lưu ${S.rows.filter(r=>r.use).length} bài</button><button class="btn ghost" data-act="clearRows">Huỷ</button></div>`:''}
-  </section>
+  </section>` : `<section class="card"><div class="eyebrow">Từ Zalo lớp</div><p class="small" style="margin:4px 0 0">Tin nhắn / ảnh bài tập của cô: <b>chụp hoặc dán vào cuộc trò chuyện với Claude</b> để Claude tách thành từng bài và nạp vào app. Bài lẻ thì ba nhập tay ở khung bên dưới.</p></section>`}
 
   <section class="card">
     <div class="eyebrow">Nhập tay</div>
@@ -1619,7 +1638,7 @@ function viewWeek(){
     <label class="f" style="margin-top:8px">Điều chỉnh cho tuần sau (tối đa 2)<textarea data-rev="adjust" style="min-height:70px">${esc(rv.adjust)}</textarea></label>
     <label class="f" style="margin-top:8px">Tuần sau có kiểm tra / hạn lớn gì?<input type="text" data-rev="ahead" value="${esc(rv.ahead)}"></label>
     <p class="small muted" style="margin-top:8px">Kết thúc bằng 1 lời khen cụ thể về quá trình, không phải về điểm số.</p>
-    <div class="row" style="margin-top:6px"><button class="btn" data-act="saveRev">Lưu review</button><button class="btn ghost" data-act="aiWeek" ${S.aiBusy||!S.sample?'disabled':''}>${S.aiBusy?'Claude đang phân tích…':'Nhờ Claude gợi ý điều chỉnh'}</button></div>
+    <div class="row" style="margin-top:6px"><button class="btn" data-act="saveRev">Lưu review</button>${S.sample ? `<button class="btn ghost" data-act="aiWeek" ${S.aiBusy?'disabled':''}>${S.aiBusy?'Claude đang phân tích…':'Nhờ Claude gợi ý điều chỉnh'}</button>` : '<span class="small muted">Muốn gợi ý điều chỉnh tuần sau: nhắn Claude trong cuộc trò chuyện.</span>'}</div>
     ${S.ai[key]?`<div class="ai" style="margin-top:12px">${esc(S.ai[key])}</div>`:''}
   </section>
   </div>`;
@@ -1638,7 +1657,7 @@ function viewTKB(){
   const base = dow(S.cur)===0 ? addDays(S.cur,1) : S.cur, autoV = tkbVer(monday(base));
   const ver = (S.tkbNo && TKB_LIST.find(x => x.no===S.tkbNo)) || autoV;
   const mon = ver===autoV ? monday(base) : monday(ver.from), todayW = (S.cur>=mon && S.cur<=addDays(mon,6)) ? dow(S.cur) : -1;
-  const verBtns = TKB_LIST.length > 1 ? `<div class="row" style="margin:6px 0 10px">${TKB_LIST.map(x => `<button class="btn ${x===ver?'':'ghost'}" style="padding:4px 12px;font-size:13px" data-act="tkbVer" data-no="${x.no}">TKB số ${x.no} · từ ${pd(x.from).getDate()}/${pd(x.from).getMonth()+1}</button>`).join('')}</div>` : '';
+  const verBtns = TKB_LIST.length > 1 ? `<div class="row" style="margin:6px 0 10px">${TKB_LIST.map(x => `<button class="btn ${x===ver?'':'ghost'}" style="padding:4px 12px;font-size:13px" data-act="tkbVer" data-no="${x.no}">TKB số ${x.name||x.no} · từ ${pd(x.from).getDate()}/${pd(x.from).getMonth()+1}</button>`).join('')}</div>` : '';
   const cols = [1,2,3,4,5,6];
   // tinh rowspan cho cac tiet lien nhau cung mon
   const grid = cols.map(w => { const ps = ver.t[w].map(p=>({...p})); while (ps.length<5) ps.push({s:'_ve'}); return ps; });
@@ -1646,8 +1665,8 @@ function viewTKB(){
   const cell = (p,n,w) => {
     const now = w===todayW ? ' now' : '';
     if (p.s==='_ve') return `<td class="c sj-ve${now}"><b>Về sớm</b></td>`;
-    if (p.s==='HĐTN' || p.s==='SH') return `<td class="c sj-hdtn${now}"><b>${esc(FULL[p.l]||p.l)}</b><i>${esc(HDTN_T[p.l]||'')}</i></td>`;
-    return `<td class="c sj-${SJC[p.s]||'khac'}${now}"${n>1?` rowspan="${n}"`:''}><b>${esc(FULL[p.s]||p.s)}</b><i>${esc((p.s==='LS&ĐL' && ver.no===3) ? 'Dương' : (ver.no>=6 && TEACH6[p.s]) || TEACH[p.s] || '')}</i>${n>1?`<em>${n} tiết</em>`:''}</td>`;
+    if (p.s==='HĐTN' || p.s==='SH') return `<td class="c sj-hdtn${now}"><b>${esc(FULL[p.l]||p.l)}</b><i>${esc((ver.teach && ver.teach[p.l]) || HDTN_T[p.l]||'')}</i></td>`;
+    return `<td class="c sj-${SJC[p.s]||'khac'}${now}"${n>1?` rowspan="${n}"`:''}><b>${esc(FULL[p.s]||p.s)}</b><i>${esc((p.s==='LS&ĐL' && ver.no===3) ? 'Dương' : (ver.teach && ver.teach[p.s]) || (ver.no>=6 && TEACH6[p.s]) || TEACH[p.s] || '')}</i>${n>1?`<em>${n} tiết</em>`:''}</td>`;
   };
   const offOf = w => ver===autoV ? offDays()[addDays(mon, w-1)] : '';
   const rows = [0,1,2,3,4].map(i => `<tr><td class="num">${i+1}</td>${cols.map((w,ci)=> offOf(w) ? (i===0 ? `<td class="c sj-ve${w===todayW?' now':''}" rowspan="5"><b>NGHỈ</b><i>${esc(offOf(w))}</i></td>` : '') : span[ci][i]===0 ? '' : cell(grid[ci][i], span[ci][i], w)).join('')}</tr>`).join('');
@@ -1659,7 +1678,7 @@ function viewTKB(){
   const eve = {1:['Ba/mẹ kèm bài',''],2:['Alokiddy 20:00–21:00','eng'],3:['Ba/mẹ kèm bài',''],4:['Alokiddy 20:00–21:00','eng'],5:['Tối nhẹ, dọn nợ',''],6:['19:30 Tổng kết tuần','']};
   return `<div class="stack">
   <section class="card">
-    <div class="eyebrow">Lớp 6A14 · TKB số ${ver.no} · áp dụng từ ${pd(ver.from).getDate()}/${pd(ver.from).getMonth()+1}/2026 · học sáng từ 7:00</div>
+    <div class="eyebrow">Lớp 6A14 · TKB số ${ver.name||ver.no} (số của trường) · áp dụng từ ${pd(ver.from).getDate()}/${pd(ver.from).getMonth()+1}/2026 · học sáng từ 7:00</div>
     <h2>Thời khoá biểu</h2>${verBtns}
     <div class="tkbwrap"><table class="tkb">
       <thead><tr><th class="corner">Tiết</th>${cols.map(w=>`<th class="${PROFILE[w].english?'eng':''}${w===todayW?' now':''}">${DAYS[w]}${PROFILE[w].english?'<small>Alokiddy 20:00</small>':''}</th>`).join('')}</tr></thead>
@@ -1865,7 +1884,7 @@ function gradeParts(day){
     return `<div class="flag"><i>!</i><div><b>${esc(skillName(s))}</b>: sai ${arr.map(a=>esc(a.sj+' '+exLabel(a.ex))).join(', ')}${kn?`<br><span class="small muted">Ôn lại: ${esc(kn)}</span>`:''}</div></div>`;
   }).join('');
   const missHTML = miss.length ? `<details class="kblk" style="margin-top:12px"><summary>Chưa có lời giải (${miss.length})</summary><ul class="qs">${miss.map(x=>`<li>[${x.book}] ${esc(x.sj)} – ${esc(lessonLabel(x.L))} (${esc(lessonPages(x.L))})</li>`).join('')}</ul>
-    <p class="small muted">Nhắn Claude trong cuộc trò chuyện (ví dụ "soạn lời giải KHTN bài 11") để có lời giải đã kiểm tra, hoặc chụp trang bài tập để Claude trong app soạn nhanh.</p>
+    <p class="small muted">Nhắn Claude trong cuộc trò chuyện (ví dụ "soạn lời giải KHTN bài 11") để có lời giải đã kiểm tra${S.sample && S.imagesOK ? ', hoặc chụp trang bài tập để Claude trong app soạn nhanh' : ' (gửi kèm ảnh trang bài tập)'}.</p>
     ${S.sample && S.imagesOK ? `<div class="row"><select data-act="keyPick" aria-label="Bài cần soạn">${miss.map(x=>`<option value="${x.id}" ${S.keyPick===x.id?'selected':''}>[${x.book}] ${esc(x.sj)} – ${esc(lessonLabel(x.L))}</option>`).join('')}</select>
       <input type="file" accept="image/*" multiple data-act="keyImg" aria-label="Ảnh trang bài tập">
       <button class="btn ghost" data-act="keyGen" ${S.keyBusy?'disabled':''}>${S.keyBusy?'Claude đang soạn…':'Soạn từ ảnh'}</button></div>${S.keyErr?`<p class="warn">${esc(S.keyErr)}</p>`:''}` : ''}</details>` : '';
@@ -2017,7 +2036,7 @@ function viewSBT(){
     <div class="filters" role="group" aria-label="Sách" style="margin-top:10px">${BOOKS.map(b=>`<button data-act="sbtBook" data-v="${b}" aria-pressed="${b===bk}">${b==='SGK'?'Sách giáo khoa':'Sách bài tập'} · ${(catOf(sj,b)||{lessons:[]}).lessons.length} mục</button>`).join('')}</div>
   </section>
 
-  <section class="card">
+  ${S.sample && S.imagesOK ? `  <section class="card">
     <div class="eyebrow">Đọc từ ảnh</div>
     <h2>Chụp mục lục hoặc trang bài tập ${bk} ${esc(sj)}</h2>
     <p class="small muted">Chụp rõ số bài, tên bài và số hiệu các câu (ví dụ 7.1, 7.2…). Có thể chọn nhiều ảnh một lần.</p>
@@ -2026,7 +2045,7 @@ function viewSBT(){
     ${S.sbtErr?`<p class="warn" style="margin-top:10px">${esc(S.sbtErr)}</p>`:''}
     ${S.sbtRows.length?`<h3>Kiểm tra lại trước khi lưu</h3><div class="tlist">${S.sbtRows.map((r,i)=>`<div class="prow" style="grid-template-columns:auto 60px 1fr"><input type="checkbox" aria-label="Chọn" data-srow="${i}" data-k="use" ${r.use?'checked':''}><b>Bài ${esc(r.no)}</b><span>${esc(r.title)}${r.sbtPages?` · ${esc(r.sbtPages)}`:''}${r.chapter?` · <span class="muted">${esc(r.chapter)}</span>`:''}</span><div class="full small">Câu: ${esc((r.ex||[]).join(', ')||'—')}</div></div>`).join('')}</div>
     <div class="row" style="margin-top:10px"><button class="btn" data-act="sbtSave">Lưu vào mục lục</button><button class="btn ghost" data-act="sbtClear">Huỷ</button></div>`:''}
-  </section>
+  </section>` : `<section class="card"><div class="eyebrow">Thêm mục lục / bài tập</div><p class="small" style="margin:4px 0 0">Chụp mục lục hoặc trang bài tập ${esc(bk)} ${esc(sj)} rồi gửi Claude trong cuộc trò chuyện – Claude nạp vào mục lục của app.</p></section>`}
 
   <section class="card">
     <div class="eyebrow">Mục lục ${bk} ${esc(sj)}</div>
@@ -2127,7 +2146,7 @@ function ghNoteHTML(L){
     <label class="small">Mã truy cập của ba (may-ba) <input id="ghToken" type="password" placeholder="github_pat_..." style="width:260px"></label>
     <button class="btn" data-act="localConnect">🔗 Kết nối</button></div>
     ${L.err ? `<p class="small" style="margin-top:6px"><b>${esc(L.err)}</b></p>` : ''}
-    <p class="small" style="margin-top:6px">Mã chỉ lưu trên trình duyệt này. ${window.showDirectoryPicker ? '<button class="btn ghost" style="padding:2px 10px;font-size:12px" data-act="storeFile">Dùng file OneDrive như cũ</button>' : ''}</p></div>`;
+    <p class="small" style="margin-top:6px">Mã chỉ lưu trên trình duyệt này. </p></div>`;
 }
 /* ============ SU KIEN ============ */
 const app = document.getElementById('app');
@@ -2706,7 +2725,7 @@ function kidCommon(){
     .map(t => ({subject: t.subject, due: t.due, text: u(t.content)})).sort((a,b) => a.due.localeCompare(b.due));
   const SCT = {tx15:'Kiểm tra 15 phút', tx45:'Kiểm tra 1 tiết', gk:'Giữa kỳ', ck:'Cuối kỳ', cong:'Điểm cộng'};
   return {
-    tkb: TKB_LIST.map(x => ({from: x.from, no: x.no, t: x.t})),
+    tkb: TKB_LIST.map(x => ({from: x.from, no: x.name || x.no, t: x.t})),
     offDays: offDays(), cancelled: (S.meta && S.meta.cancelled) || {},
     english: [1,2,3,4,5,6].filter(w => PROFILE[w] && PROFILE[w].english),
     exams,
@@ -2785,7 +2804,9 @@ async function applyKid(ev){
     if (ev.mode === 'off'){ if (!cx.includes(sj)) await metaMerge({cancelled: {[day]: cx.concat([sj])}}); return; }
     if (cx.includes(sj)) await metaMerge({cancelled: {[day]: cx.filter(x => x !== sj)}});   // con doi lai: co hoc
     if (ev.mode && ev.mode !== 'new') return;
-    const ls = parseLessons(sj, String(ev.lesson || '').trim()); if (!ls.length) return;
+    // ba 8/11: con go so '4' cho mon danh so bang chu (Tieng Anh U4) -> doi theo muc luc
+    const raw = String(ev.lesson || '').trim().split(/\s*,\s*/).map(x => { const cs = BOOKS.map(bk => catOf(sj, bk)).filter(Boolean); if (!/^\d+$/.test(x) || cs.some(c => c.lessons.some(L => String(L.no) === x))) return x; const pre = cs.flatMap(c => c.lessons).find(L => String(L.no).replace(/^\D+/, '') === x && /^[A-Za-z]+\d+$/.test(String(L.no))); return pre ? String(pre.no) : x; }).join(', ');
+    const ls = parseLessons(sj, raw); if (!ls.length) return;
     const id = day + '_' + (SLUG[sj] || 'khac'), cur = S.progRaw ? S.progRaw.find(x => x.id === id) : null;
     if (cur && cur.by !== 'con') return;   // ba da nhap -> giu ban cua ba
     await setDoc('progress', id, {date: day, subject: sj, lesson: ls[ls.length-1], lessons: ls.length > 1 ? ls : [], pages: String(ev.pages || '').trim(), part: String(ev.part || '').trim(), note: String(ev.note || '').trim(), by: 'con', kidAt: ev.at});
