@@ -347,7 +347,7 @@ const dow = s => pd(s).getDay();
 const diff = (a,b) => Math.round((pd(b)-pd(a))/864e5);
 const fmt = s => s ? `${SHORT[dow(s)]} ${pd(s).getDate()}/${pd(s).getMonth()+1}` : '—';
 const nextSchool = s => { let x = addDays(s,1); while (dow(x)===0 || isOff(x)) x = addDays(x,1); return x; };
-const nextLesson = (subj,s,part) => { for (let i=1;i<=14;i++){ const x=addDays(s,i), w=dow(x); if (w && tkbOf(x)[w].some(p=>p.s===subj) && (!part || subj!=='Toán' || dayParts(subj, x).includes(part))) return x; } return nextSchool(s); };
+const nextLesson = (subj,s,part) => { for (let i=1;i<=14;i++){ const x=addDays(s,i), w=dow(x); if (w && tkbOf(x)[w].some(p=>p.s===subj) && (!part || subj!=='Toán' || x >= NOPART_FROM || dayParts(subj, x).includes(part))) return x; } return nextSchool(s); };
 // Buoi hoc ke tiep cua bai p (Toan: buoi ke tiep cung phan Hinh hoc / So hoc)
 const nextOf = p => nextLesson(p.subject, p.date, p.subject==='Toán' ? partOf(p.subject, p.lesson) : '');
 const monday = s => addDays(s, -((dow(s)+6)%7));
@@ -478,7 +478,7 @@ function doneWork(sj, book, lesson){
 // Lich giao cau theo tien do kien thuc (ba 21/10): L.exPages {cau: trang SGK chua kien thuc can dung}; cau chi giao khi da hoc toi trang do.
 // Moi buoi toi da perDay cau; cau da 'mo' ma chua giao thi de buoi sau. Khong co exPages -> moi cau mo tu dau (nhu cu).
 function exSchedule(sj, book, L, pl, part){
-  const cat = catOf(sj, book), n = sj==='Toán' ? (+(cat && cat.perDay) || (book==='SGK'?5:3)) * (part==='HH' && pl >= TOAN_PART_FROM ? 2 : 1) : 99, all = L.ex || [], ep = L.exPages || {};   // ba 21/10: mon khac Toan giao het cau da du kien thuc
+  const cat = catOf(sj, book), n = sj==='Toán' && pl < NOPART_FROM ? (+(cat && cat.perDay) || (book==='SGK'?5:3)) * (part==='HH' && pl >= TOAN_PART_FROM ? 2 : 1) : 99, all = L.ex || [], ep = L.exPages || {};   // ba 21/10: mon khac Toan giao het cau da du kien thuc
   const prsL = S.progress.filter(p => p.subject===sj && String(p.lesson)===String(L.no) && p.date <= pl && (!part || partOf(sj, p.lesson)===part)).sort((a,b) => a.date.localeCompare(b.date) || (a._ord||0)-(b._ord||0));
   if (!prsL.length) return null;
   let extra = 0; const last = prsL[prsL.length-1];
@@ -621,9 +621,9 @@ function lsdlPlanDay(d){
   let best = c[0], bl = afternoonLoad(c[0]); c.slice(1).forEach(y => { const l = afternoonLoad(y); if (l < bl){ best = y; bl = l; } });
   return {plan: best, nc, cands: c};
 }
-function lsdlWork(day, skip){
-  const sj = 'LS&ĐL', out = [];
-  S.progress.filter(p => p.subject===sj && p.lesson && p.date <= day && p.date >= addDays(day,-10)).forEach(pr => {
+function lsdlWork(day, skip, sj0){
+  const sj = sj0 || 'LS&ĐL', out = [];
+  S.progress.filter(p => p.subject===sj && p.lesson && (sj!=='Toán' || p.date >= NOPART_FROM) && p.date <= day && p.date >= addDays(day,-10)).forEach(pr => {
     const {plan, nc, moved} = day >= UNIT_PLAN_FROM ? unitOf(pr, day) : lsdlPlanDay(pr.date); if ((nc <= day && !(moved && day === plan)) || day < plan) return;
     const part = partOf(sj, pr.lesson), multi = !!pr.virtualOf;
     if (multi && day < UNIT_PLAN_FROM && S.progress.some(q => q.virtualOf===pr.virtualOf && q._ord > pr._ord && partOf(sj, q.lesson)===part)) return;
@@ -632,7 +632,7 @@ function lsdlWork(day, skip){
       if (skip.has(autoKey(sj, nc, src)) || S.tasks.some(t => t.subject===sj && t.source===src && t.due===nc && (!multi || day < UNIT_PLAN_FROM || String(t.lessonNo)===String(pr.lesson)))) return;
       const txt = multi && day >= UNIT_PLAN_FROM ? sbtPlan1(sj, pr.date, book, part, pr) : sbtPlan(sj, pr.date, book, part); if (txt === false) return;
       out.push({id:'v:'+sj+':'+nc+':'+book+(multi && day >= UNIT_PLAN_FROM ? ':'+pr.lesson : ''), virtual:true, book, part, lessonNo:pr.lesson, subject:sj, source:src, due:nc, assigned:pr.date, planDay:plan, prio:'P2', status:'todo', note:'',
-        content:(txt || `${partName(part)||'LS&ĐL'} – bài học sáng ${fmt(pr.date)} (xem vở ghi): ôn bài, làm bài tập ${book}`) + (day > plan ? ` (chưa làm từ chiều ${fmt(plan)})` : '')});
+        content:(txt || `${partName(part)||sj} – bài học sáng ${fmt(pr.date)} (xem vở ghi): ôn bài, làm bài tập ${book}`) + (day > plan ? ` (chưa làm từ chiều ${fmt(plan)})` : '')});
     });
   });
   return out;
@@ -641,7 +641,7 @@ function lsdlWork(day, skip){
 // nua sau (+ lam lai cau sai) vao chieu truoc buoi Hinh hoc ke tiep. Moi tuan toi da 2 x perDay cau moi sach.
 function hhWork(day, skip){
   const sj = 'Toán', out = []; if (day < TOAN_PART_FROM) return out;
-  S.progress.filter(p => p.subject===sj && p.lesson && p.date >= TOAN_PART_FROM && p.date <= day && p.date >= addDays(day,-14) && partOf(sj, p.lesson)==='HH').forEach(pr => {
+  S.progress.filter(p => p.subject===sj && p.lesson && p.date >= TOAN_PART_FROM && p.date < NOPART_FROM && p.date <= day && p.date >= addDays(day,-14) && partOf(sj, p.lesson)==='HH').forEach(pr => {
     const {plan, nc, eve, moved} = unitOf(pr, day); if ((nc <= day && !(moved && day === plan)) || day < plan) return;
     booksOf(sj).forEach(book => {
       const src = book==='SGK' ? 'G' : 'S', cat = catOf(sj, book), L = cat && findLesson(cat, pr.lesson);
@@ -675,7 +675,7 @@ function defaultSBT0(day, ignoreStored){
     const due = addDays(day,k), w = dow(due); if (!w) continue;
     const prevLesson = (sj, tp) => { for (let i=1;i<=14;i++){ const x=addDays(due,-i), q=dow(x); if (q && tkbOf(x)[q].some(p=>p.s===sj) && (!tp || dayParts(sj, x).includes(tp))) return x; } return day; };
     [...new Set(tkbOf(due)[w].map(p=>p.s).filter(x=>AUTO_SUBJECTS.includes(x)))].forEach(sj => {
-      if (sj==='LS&ĐL') return;   // LS&DL: giao theo bai hoc buoi sang (lsdlWork), khong doan phan
+      if (sj==='LS&ĐL' || (sj==='Toán' && due >= NOPART_FROM)) return;   // LS&DL (va Toan tu 9/11): giao theo bai hoc buoi sang (lsdlWork), khong doan phan
       const tps = sj==='Toán' && due >= TOAN_PART_FROM ? dayParts(sj, due) : [], tp = tps.includes('SH') ? 'SH' : (tps[0] || '');   // T6 co ca HH + SH: phan SH giao o day, HH do hhWork   // han nop truoc 22/10 giu cach cu   // Toan: buoi nop la Hinh hoc hay So hoc
       if (tp==='HH') return;   // Hinh hoc: giao theo bai hoc thu Sau, rai trong tuan (hhWork)
       const sh = tkbVer(due).shift; const off = (sh[w] && sh[w][sj]) || diff(workDay(due), due);   // chieu hoc gan nhat truoc han: nop T2 -> lam chieu T7 (CN nghi); hom truoc la ngay nghi dot xuat -> lui them
@@ -713,7 +713,7 @@ function defaultSBT0(day, ignoreStored){
     });
   }
   if (ignoreStored) return out;
-  out.push(...lsdlWork(day, skip), ...hhWork(day, skip));
+  out.push(...lsdlWork(day, skip), ...lsdlWork(day, skip, 'Toán'), ...hhWork(day, skip));
   // Bai khong co danh sach cau cu the (vd Van, LS&DL): cung mon + sach + bai chi giu 1 dong – han gan nhat tu ngay mai tro di
   const grp = {};
   out.forEach(t => { const cat = catOf(t.subject, t.book), L = cat && t.lessonNo ? findLesson(cat, t.lessonNo) : null; if (!L || (L.ex||[]).length) return;
@@ -814,7 +814,8 @@ async function ensureSkipped(){
 }
 // LS&DL: 2 phan Lich su (LS..) va Dia li (DL..) hoc song song, no bai cu tinh rieng tung phan
 // Toan (ba 22/10): tiet Toan thu Sau luon la Hinh hoc (HH); cac tiet khac la So hoc (SH). Bai thuoc phan nao: theo chuong trong muc luc.
-var TOAN_PART_FROM = '2026-10-22';   // tu ngay nay giao bai / hoc thuoc / on tap Toan tach rieng Hinh hoc – So hoc
+var TOAN_PART_FROM = '2026-10-22';
+var NOPART_FROM = '2026-11-09';   // ba 9/11: tu ngay nay Toan, LS&DL khong phan biet ngay nao hoc phan nao – han = tiet ke tiep cua mon   // tu ngay nay giao bai / hoc thuoc / on tap Toan tach rieng Hinh hoc – So hoc
 var _pc = {s: null, m: {}};
 function partOf(sj, no){
   if (sj==='LS&ĐL'){ const m = String(no).match(/^(LS|DL)/i); return m ? m[1].toUpperCase() : ''; }
@@ -830,18 +831,20 @@ const partName = p => p==='LS' ? 'Lịch sử' : p==='DL' ? 'Địa lí' : p==='
 // Tiet cua mon sj ngay d thuoc phan nao. Toan: da ghi tien do -> theo bai da hoc; chua ghi -> thu Sau = Hinh hoc, con lai So hoc
 // Cac phan cua mon sj hoc trong ngay d (Toan TKB moi: thu Sau co ca Hinh hoc va So hoc)
 function dayParts(sj, d){
+  if ((sj==='Toán' || sj==='LS&ĐL') && d >= NOPART_FROM) return [''];
   if (sj==='Toán'){ const on = S.progress.filter(p => p.subject===sj && p.date===d && p.lesson); if (on.length) return [...new Set(on.map(p => partOf(sj, p.lesson)).filter(Boolean))];
     if (d >= '2026-11-09') return dow(d)===2 ? ['HH','SH'] : ['SH'];   // ba 8/11: TKB so 7 – T3 2 tiet Toan
     if (dow(d)===5) return d >= '2026-10-26' ? ['HH','SH'] : ['HH']; return ['SH']; }
   return [dayPart(sj, d)];
 }
 function dayPart(sj, d){
+  if (sj==='Toán' && d >= NOPART_FROM) return '';
   if (sj==='Toán'){ const on = S.progress.find(p => p.subject===sj && p.date===d && p.lesson); if (on) return partOf(sj, on.lesson); return dow(d)===5 ? 'HH' : 'SH'; }
   if (sj==='LS&ĐL') return partForLesson(sj, d);
   return '';
 }
 // Buoi hoc ngay x co tinh la mot buoi cua phan 'part' (de dem buoi chua ghi tien do). LS&DL khong doan phan -> khong dem.
-const sessOf = (sj, x, part) => hasClass(sj, x) && (!part || (sj==='Toán' && dayParts(sj, x).includes(part)));
+const sessOf = (sj, x, part) => hasClass(sj, x) && (!part || (sj==='Toán' && (x >= NOPART_FROM || dayParts(sj, x).includes(part))));
 // Ten mon hien thi theo bai: LS&DL -> Lich su / Dia li; Toan -> Toan – Hinh hoc / So hoc; Van -> Ngu Van
 const subjLabel = (sj, no) => sj==='LS&ĐL' ? (partName(partOf(sj, no)) || 'LS&ĐL') : sj==='Toán' ? (partOf(sj, no) ? 'Toán – ' + partName(partOf(sj, no)) : 'Toán') : sj==='Văn' ? 'Ngữ Văn' : sj;
 // Tiet LS&DL ngay lessonDay hoc phan nao: ba chon > tien do da ghi ngay do > doan xen ke voi buoi truoc
