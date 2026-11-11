@@ -2733,8 +2733,25 @@ function kidCommon(){
     english: [1,2,3,4,5,6].filter(w => PROFILE[w] && PROFILE[w].english),
     exams,
     scores: S.scores.slice().sort((a,b) => String(b.date).localeCompare(String(a.date))).slice(0, 12).map(x => ({subject: x.subject, type: SCT[x.type] || x.type, value: x.value, date: x.date})),
-    subjects: SUBJECTS
+    subjects: SUBJECTS,
+    lessons: kidLessons()   // ba 11/11: muc luc de con chon bai tu danh sach
   };
+}
+// Muc luc gui app con: moi mon danh sach bai (so bai that trong app, vd 'DL9', 'U4', '13') + bai hoc gan nhat
+function kidLessons(){
+  const o = {};
+  SUBJECTS.forEach(sj => {
+    const c = catOf(sj, 'SGK') || catOf(sj, 'SBT'); if (!c) return;
+    const seen = new Set(), list = [];
+    c.lessons.forEach(L => { const no = String(L.no); if (!no || seen.has(no)) return; seen.add(no); list.push({no, t: u(lessonLabel(L)).slice(0, 90)}); });
+    if (!list.length) return;
+    // bai gan nhat cua tung phan (LS & DL; Toan chi 1 phan) -> app con dua len nhom 'Gan day'
+    const last = [], seenK = new Set(), nos = new Set(list.map(x => x.no));
+    S.progress.filter(p => p.subject === sj && p.lesson && p.date <= TODAY).sort((a, b) => String(b.date).localeCompare(String(a.date)))
+      .forEach(p => String(p.lesson).split(/\s*,\s*/).reverse().forEach(no => { const kk = /^(LS|DL)\d/.test(no) ? no.slice(0, 2) : '*'; if (!seenK.has(kk) && nos.has(no)){ seenK.add(kk); last.push(no); } }));
+    o[sj] = {last: last.slice(0, 2), list};
+  });
+  return o;
 }
 const PUB = {last: {}, busy: false, t: 0, day: ''};
 function schedulePublish(ms){ clearTimeout(PUB.t); PUB.t = setTimeout(publishKid, ms == null ? 5000 : ms); }
@@ -2808,7 +2825,10 @@ async function applyKid(ev){
     if (cx.includes(sj)) await metaMerge({cancelled: {[day]: cx.filter(x => x !== sj)}});   // con doi lai: co hoc
     if (ev.mode && ev.mode !== 'new') return;
     // ba 8/11: con go so '4' cho mon danh so bang chu (Tieng Anh U4) -> doi theo muc luc
-    const raw = String(ev.lesson || '').trim().split(/\s*,\s*/).map(x => { const cs = BOOKS.map(bk => catOf(sj, bk)).filter(Boolean); if (!/^\d+$/.test(x) || cs.some(c => c.lessons.some(L => String(L.no) === x))) return x; const pre = cs.flatMap(c => c.lessons).find(L => String(L.no).replace(/^\D+/, '') === x && /^[A-Za-z]+\d+$/.test(String(L.no))); return pre ? String(pre.no) : x; }).join(', ');
+    const raw = String(ev.lesson || '').trim().split(/\s*,\s*/).map(x => { const cs = BOOKS.map(bk => catOf(sj, bk)).filter(Boolean); if (!/^\d+$/.test(x) || cs.some(c => c.lessons.some(L => String(L.no) === x))) return x; const cand = [...new Set(cs.flatMap(c => c.lessons).map(L => String(L.no)).filter(no => /^[A-Za-z]+\d+$/.test(no) && no.replace(/^\D+/, '') === x))]; if (!cand.length) return x; if (cand.length === 1) return cand[0];
+      // ba 11/11: nhieu bai cung so (LS9 / DL9) -> theo o 'Phan' con ghi, khong co thi theo phan cua bai hoc gan nhat
+      const hint = /đ\s*l|địa/i.test(ev.part || '') ? 'DL' : /l\s*s|lịch/i.test(ev.part || '') ? 'LS' : String((S.progress.filter(p => p.subject === sj && p.date < day).sort((a, b) => String(b.date).localeCompare(String(a.date)))[0] || {}).lesson || '').replace(/\d.*$/, '');
+      return cand.find(no => hint && no.startsWith(hint.toUpperCase())) || x; }).join(', ');
     const ls = parseLessons(sj, raw); if (!ls.length) return;
     const id = day + '_' + (SLUG[sj] || 'khac'), cur = S.progRaw ? S.progRaw.find(x => x.id === id) : null;
     if (cur && cur.by !== 'con') return;   // ba da nhap -> giu ban cua ba

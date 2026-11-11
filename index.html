@@ -167,6 +167,9 @@ textarea{min-height:70px;resize:vertical}
 .mode[aria-pressed="true"]{border-color:var(--violet);background:var(--violet-soft);color:var(--violet)}
 .mode.off[aria-pressed="true"]{border-color:var(--no);background:var(--no-soft);color:var(--no)}
 
+/* ---- chon bai (ba 11/11) ---- */
+.lessonf{grid-column:1/-1;min-width:0}.lessonf select{width:100%;max-width:100%}
+.linkbtn{background:none;border:0;padding:4px 0 0;color:var(--violet);font-weight:700;cursor:pointer;text-align:left}
 /* ---- giai thich bai on (ba 2/11) ---- */
 .explain{margin-top:8px;padding:9px 12px;border-radius:12px;background:var(--paper);border:1.5px dashed var(--line);display:flex;flex-direction:column;gap:4px;font-size:14px}
 .kwline{color:var(--ink)}
@@ -810,6 +813,18 @@ function viewKnow(evs){
 }
 
 /* ---- NHAP BAI ---- */
+// Ba 11/11: chon bai tu muc luc (tranh go '9' ma app hieu nham Lich su / Dia li, So hoc / Hinh hoc)
+function lessonFieldHTML(sj, v, d){
+  const C = ((S.common && S.common.lessons) || {})[sj], cur = v.lesson ?? (d && d.mode !== 'off' ? d.lesson || '' : '');
+  if (!C || !C.list.length) return `<label class="f">Bài số<input type="text" data-prog="${esc(sj)}" data-k="lesson" value="${esc(cur)}" placeholder="vd 20 hoặc 19, 20"></label>`;
+  const [c1, c2] = String(cur).split(/\s*,\s*/), lasts = [].concat(C.last || []);
+  const near = lasts.flatMap(no => { const i = C.list.findIndex(x => x.no === no); return i >= 0 ? C.list.slice(i, i + 2) : []; });   // bai vua hoc + bai tiep theo (moi phan)
+  const opt = (x, sel) => `<option value="${esc(x.no)}" ${sel ? 'selected' : ''}>${esc(x.t)}</option>`;
+  const sel = (k, val, first) => { let used = false; const pick = x => { if (!used && x.no === val){ used = true; return true; } return false; };
+    return `<select data-prog="${esc(sj)}" data-k="${k}"><option value="">${first ? '– chọn bài –' : '(không có)'}</option>${near.length ? `<optgroup label="Gần đây (bài vừa học và bài tiếp theo)">${near.map(x => opt(x, pick(x))).join('')}</optgroup>` : ''}<optgroup label="Tất cả bài">${C.list.map(x => opt(x, pick(x))).join('')}</optgroup></select>`; };
+  const two = (v.lesson2 ?? c2) || S.prog2open === sj;
+  return `<label class="f lessonf">Bài học${sel('lesson', v.lesson ?? c1 ?? '', true)}${two ? `<span class="small muted" style="margin-top:4px">Bài thứ 2 (nếu học 2 bài)</span>${sel('lesson2', v.lesson2 ?? c2 ?? '', false)}` : `<button class="linkbtn small" data-act="lesson2" data-sj="${esc(sj)}">＋ Hôm nay học 2 bài</button>`}</label>`;
+}
 function viewAdd(evs){
   const T = today(), subs = [...new Set(periodsOf(T).map(x => x.s).filter(s => !SKIP_PROG.has(s)))];
   const doneP = evs.filter(e => e.type === 'progress' && e.day === T);
@@ -822,7 +837,7 @@ function viewAdd(evs){
         <div class="prow-h"><span class="chip" style="${sjStyle(sj)}">${ic(sj)} ${esc(sj)}</span>
           <span class="modes" role="group" aria-label="Tiết ${esc(sj)} hôm nay">${MODES.map(([k, i, n]) => `<button class="mode ${k === 'off' ? 'off' : ''}" aria-pressed="${mode === k}" data-act="pmode" data-sj="${esc(sj)}" data-v="${k}">${i} ${n}</button>`).join('')}</span>
           ${d ? `<span class="ok-note">✓ đã gửi ${hm(d.at)}</span>` : ''}</div>
-        <div class="prow-f">${mode === 'new' ? `<label class="f">Bài số<input type="text" data-prog="${esc(sj)}" data-k="lesson" value="${esc(v.lesson ?? (d && d.mode !== 'off' ? d.lesson || '' : ''))}" placeholder="vd 20 hoặc 19, 20"></label>
+        <div class="prow-f">${mode === 'new' ? lessonFieldHTML(sj, v, d) + `
           <label class="f">Trang<input type="text" data-prog="${esc(sj)}" data-k="pages" value="${esc(v.pages ?? (d ? d.pages || '' : ''))}" placeholder="90–92"></label>` : `<p class="small muted" style="margin:0;align-self:center">${mode === 'off' ? 'Tiết này không học – ba sẽ dời bài của môn này sang buổi học sau.' : 'Không học bài mới – không cần ghi số bài.'}</p>`}
           <label class="f">${mode === 'new' ? 'Phần / ghi chú' : 'Ghi chú (nếu có)'}<input type="text" data-prog="${esc(sj)}" data-k="part" value="${esc(v.part ?? (d ? d.part || '' : ''))}" placeholder="${mode === 'new' ? 'vd Luyện tập 2' : mode === 'off' ? 'vd cô đi họp' : mode === 'test' ? 'vd kiểm tra 15 phút Bài 13' : 'vd ôn đề cương câu 1–10'}"></label></div>
       </div>`; }).join('')}</div>
@@ -938,10 +953,12 @@ app.addEventListener('click', async e => {
     case 'reveal': S.reveal[d.k] = !S.reveal[d.k]; render(); break;
     case 'read': addEvent({type: 'read', kid: d.k, text: d.t, planDay: d.day}); toast('Giỏi lắm! Giờ làm bài tập nào ✏️'); break;
     case 'pmode': S.prog[d.sj] = {...(S.prog[d.sj] || {}), mode: d.v}; render(); break;
+    case 'lesson2': S.prog2open = d.sj; render(); break;
     case 'saveProg': {
       let n = 0;
       const miss = [];
       Object.entries(S.prog).forEach(([sj, v]) => { const mode = v.mode || 'new';
+        if (v.lesson2 !== undefined || v.lesson !== undefined){ const d0 = [...allEvents()].reverse().find(e => e.type === 'progress' && e.subject === sj && e.day === today()) || {}; const [o1, o2] = String(d0.lesson || '').split(/\s*,\s*/); v.lesson = [v.lesson ?? o1 ?? '', v.lesson2 ?? o2 ?? ''].filter(x => String(x).trim()).join(', '); }
         if (mode === 'new' && !String(v.lesson || '').trim()){ if (v.mode || v.pages || v.part) miss.push(sj); return; }
         addEvent({type: 'progress', subject: sj, mode, lesson: mode === 'new' ? String(v.lesson).trim() : '', pages: mode === 'new' ? String(v.pages || '').trim() : '', part: String(v.part || '').trim()}); n++; });
       if (miss.length){ toast('Con ghi số bài cho ' + miss.join(', ') + ' (hoặc chọn tình huống khác)'); if (!n) return; }
