@@ -263,13 +263,30 @@ const PREP_V8 = {
   6:{items:'Sách Tin học, Âm nhạc',focus:'KHTN – 2 tiết, Tin học, Âm nhạc'}
 };
 const TEACH8 = {'Văn':'Linh','Tin học':'Bảo','LS&ĐL':'Hà (Sử)','GDĐP':'Trúc','Chào cờ':'Hằng (Đội)','SHL':'Linh (GVCN)','SHCĐ':'Linh'};   // TKB tu 9/11 – GVCN co Linh
+const TKB_V9 = {   // truong ghi 'So 8', ap dung tu 16/11/2026
+  1: [{s:'SH',l:'Chào cờ'},{s:'Toán'},{s:'Tiếng Anh'},{s:'Văn'},{s:'Văn'}],
+  2: [{s:'Văn'},{s:'Công nghệ'},{s:'KHTN'},{s:'Toán'},{s:'LS&ĐL'}],
+  3: [{s:'Thể dục'},{s:'Thể dục'},{s:'LS&ĐL'},{s:'LS&ĐL'},{s:'Mĩ thuật'}],
+  4: [{s:'Toán'},{s:'GDĐP'},{s:'Tiếng Anh'},{s:'GDCD'},{s:'KHTN'}],
+  5: [{s:'Toán'},{s:'Tiếng Anh'},{s:'HĐTN',l:'SHCĐ'},{s:'Văn'},{s:'SH',l:'SHL'}],
+  6: [{s:'KHTN'},{s:'KHTN'},{s:'Tin học'},{s:'Âm nhạc'}]
+};
+const PREP_V9 = {
+  1:{items:'Đồng phục chào cờ',focus:'Toán, Tiếng Anh, Văn – 2 tiết'},
+  2:{items:'Sách Công nghệ',focus:'Văn, Công nghệ, KHTN, Toán, LS&ĐL'},
+  3:{items:'Đồ thể dục, bình nước, đồ dùng Mĩ thuật',focus:'LS&ĐL – 2 tiết, Mĩ thuật'},
+  4:{items:'Sách GDĐP, GDCD',focus:'Toán, GDĐP, Tiếng Anh, GDCD, KHTN'},
+  5:{items:'—',focus:'Toán, Tiếng Anh, Văn'},
+  6:{items:'Sách Tin học, Âm nhạc',focus:'KHTN – 2 tiết, Tin học, Âm nhạc'}
+};
 const TKB_LIST = [
   {from:'2026-09-28', no:3, t:TKB_V3, shift:{5:{'Tin học':2}}},
   {from:'2026-10-05', no:4, t:TKB_V4, shift:{}},
   {from:'2026-10-19', no:5, name:'4b', t:TKB_V5, shift:{}},
   {from:'2026-10-26', no:6, name:'5', t:TKB_V6, shift:{}},   // ba 7/10: bai chi giao vao chieu truoc buoi hoc theo TKB (bo lam som Anh tu T3)
   {from:'2026-11-02', no:7, name:'6', t:TKB_V7, shift:{}, prep:PREP_V7},   // truong ghi 'So 6'
-  {from:'2026-11-09', no:8, name:'7', t:TKB_V8, shift:{}, prep:PREP_V8, teach:TEACH8}   // truong ghi 'So 7'
+  {from:'2026-11-09', no:8, name:'7', t:TKB_V8, shift:{}, prep:PREP_V8, teach:TEACH8},   // truong ghi 'So 7'
+  {from:'2026-11-16', no:9, name:'8', t:TKB_V9, shift:{}, prep:PREP_V9, teach:TEACH8}   // truong ghi 'So 8' (anh khong ghi ten GV – giu GV cua TKB so 7)
 ];
 const tkbVer = d => { let v = TKB_LIST[0]; for (const x of TKB_LIST) if (d >= x.from) v = x; return v; };
 // Ngay nghi dot xuat (ba nhap o tab TKB, luu meta.offDays {ngay: ly do}): ngay do khong co tiet nao
