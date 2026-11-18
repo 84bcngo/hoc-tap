@@ -2371,6 +2371,7 @@ app.addEventListener('click', async e => {
     case 'kidSync': await ingestKid(); schedulePublish(0); break;
     case 'doBaiPrint': doBaiPrint(); break;
     case 'kidGrade': kidGradeSet(d.ev, {grades: {[d.q]: d.v}}); break;
+    case 'kidReveal': kidRevealSet(d.ev, d.v === '1'); break;
     case 'kidComment': kidGradeSet(d.ev, {comment: (document.getElementById('kc_' + d.ev) || {}).value || ''}); break;
     case 'storeFile': try{ localStorage.setItem('tro-ly-6a14-store', 'file'); }catch(x){} location.reload(); break;
     case 'storeGh': try{ localStorage.removeItem('tro-ly-6a14-store'); }catch(x){} location.reload(); break;
@@ -2857,7 +2858,41 @@ async function applyKid(ev){
     await addTask({subject: ev.subject, content: String(ev.content).trim(), due: ev.due || '', source: ev.source || 'V', assigned: day, prio: '', note: 'Con nhập trên app ' + fmt(day), fromKid: true, kidAt: ev.at, book: ev.source === 'S' ? 'SBT' : ev.source === 'G' ? 'SGK' : '', lessonNo: '', part: ''});
     return;
   }
+  if (ev.type === 'check' && ev.keyId && ev.res){
+    // ba 18/11: con tu kiem tra ket qua -> y dung / sai vao phieu cham (checks) cua ngay con lam; y 'cho ba' khong ghi
+    const id = day + '_' + ev.keyId, cur = S.checks[id] || {date: day, keyId: ev.keyId, wrong: [], ok: []};
+    const ok = new Set(cur.ok || []), wrong = new Set(cur.wrong || []);
+    Object.entries(ev.res).forEach(([pid, v]) => { if (v.r === 'ok'){ ok.add(pid); wrong.delete(pid); } else if (v.r === 'wrong'){ wrong.add(pid); ok.delete(pid); } });
+    await setDoc('checks', id, {...cur, date: day, keyId: ev.keyId, ok: [...ok], wrong: [...wrong], byKid: true});
+    return;
+  }
   // note / read: chi hien trong khung "Con bao tren app"
+}
+// Kiem tra ket qua cua con (ba 18/11): luot 1 / luot 2, nhan loi tung y sai, nut "Cho con xem dap an"
+const KT_R = {ok: ['✓', 'var(--ok)'], wrong: ['✗', 'var(--p1)'], skip: ['⏳ chưa làm được', 'var(--p2)'], self: ['⏳ tự đánh giá', 'var(--p2)']};
+const KT_SELF = {ok: 'Em làm được', unsure: 'Chưa chắc', no: 'Em chưa làm được'};
+function ktRunsOf(t){ return KID.events.filter(e => e.type === 'check' && (e.taskId === t.id || (t.fromV && e.taskId === t.fromV))); }
+function ktLineHTML(t){
+  const runs = ktRunsOf(t), r1 = runs.find(e => e.attempt === 1); if (!r1) return '';
+  const r2 = runs.find(e => e.attempt === 2 && e.run === r1.id), st = {};
+  Object.entries(r1.res || {}).forEach(([k, v]) => st[k] = {r1: v, fin: v}); if (r2) Object.entries(r2.res || {}).forEach(([k, v]) => { st[k] = {...st[k], r2: v, fin: v}; });
+  const ks = (r1.scope || Object.keys(st)).filter(k => st[k]), fin = ks.map(k => st[k].fin.r);
+  const nOk = fin.filter(r => r === 'ok').length, nW = fin.filter(r => r === 'wrong').length, nWait = fin.length - nOk - nW, n12 = ks.filter(k => st[k].r1.r === 'wrong' && st[k].r2 && st[k].r2.r === 'ok').length;
+  const G = KID.grades[r1.id] || {}, rev = !!G.reveal;
+  const cell = v => { if (!v) return '<span class="muted">–</span>'; const R = KT_R[v.r] || ['?', '']; return `<b style="color:${R[1]}">${R[0]}</b>${v.r === 'self' ? ' ' + esc(KT_SELF[v.v] || v.v || '') : v.v ? ' ' + esc(v.v) : ''}`; };
+  const note = k => { const a = st[k]; const errs = [a.r1, a.r2].filter(v => v && v.r === 'wrong').map(v => v.err).filter(Boolean); const right = (a.r2 && a.r2.right) || a.r1.right || '';
+    return (errs.length ? [...new Set(errs)].map(esc).join('; ') : '') + (right && a.fin.r !== 'ok' ? `<div class="muted">Đáp án: <b>${esc(right)}</b></div>` : ''); };
+  const need = ks.filter(k => st[k].fin.r !== 'ok'), open = KID.open['kt' + r1.id] !== undefined ? KID.open['kt' + r1.id] : need.length > 0;
+  return `<div class="small qline"><details ${open ? 'open' : ''} data-kidq="kt${esc(r1.id)}"><summary style="cursor:pointer">✔ Con tự kiểm tra kết quả (${hhmm(r1.at)}${r2 ? ', lần 2 ' + hhmm(r2.at) : ''}): <b style="color:var(--ok)">${nOk}/${fin.length} đúng</b>${nW ? ` · <b style="color:var(--p1)">${nW} sai</b>` : ''}${nWait ? ` · <b style="color:var(--p2)">${nWait} chờ ba</b>` : ''}${n12 ? ` · ${n12} ý tự sửa đúng ở lần 2` : ''}${!r2 && (r1.res && Object.values(r1.res).some(v => v.r === 'wrong')) ? ' · <span class="muted">con chưa làm lần 2</span>' : ''}</summary>
+    ${need.length ? `<div class="tablewrap"><table><thead><tr><th>Ý</th><th>Lần 1</th><th>Lần 2</th><th>Lỗi / đáp án (chỉ ba thấy)</th></tr></thead><tbody>${need.map(k => `<tr><td><b>${esc(k)}</b></td><td>${cell(st[k].r1)}</td><td>${cell(st[k].r2)}</td><td>${note(k)}</td></tr>`).join('')}</tbody></table></div>` : '<p class="small">Đúng hết, không cần hỗ trợ. 🎉</p>'}
+    ${nOk && need.length ? `<p class="small muted" style="margin:4px 0">Đúng: ${ks.filter(k => st[k].fin.r === 'ok').map(esc).join(', ')}</p>` : ''}
+    <div class="row small" style="gap:8px;margin:6px 0">${rev ? `<span class="chip" style="background:var(--ok-soft);color:var(--ok)">👀 Đã cho con xem đáp án ${G.at ? hhmm(G.at) : ''}</span><button class="btn ghost xs" data-act="kidReveal" data-ev="${esc(r1.id)}" data-v="0">Ẩn lại</button>` : `<button class="btn ghost xs" data-act="kidReveal" data-ev="${esc(r1.id)}" data-v="1">👀 Cho con xem đáp án</button><span class="muted">app con chỉ hiện đáp án khi ba bấm</span>`}</div>
+  </details></div>`;
+}
+function kidRevealSet(evId, on){
+  const e = KID.events.find(x => x.id === evId); if (!e) return;
+  KID.grades[evId] = {...(KID.grades[evId] || {}), type: 'check', ev: evId, keyId: e.keyId, subject: e.subject, reveal: !!on, at: new Date().toISOString()};
+  render(); kidGradeSave(evId);
 }
 // Bai on dien tu con nop: diem tu cham + cau sai + cau tu luan de ba cham (ket qua gui ve kho cua con: cham-bai/<idSuKien>.json)
 function quizLineHTML(e){
@@ -2898,6 +2933,7 @@ function kidPanelHTML(day){
     : e.type === 'progress' ? `📘 Nhập bài đã học – <b>${esc(e.subject)}</b> bài ${esc(e.lesson)}${e.pages ? ' tr.' + esc(e.pages) : ''}${e.part ? ' (' + esc(e.part) + ')' : ''}${e.note ? ' · ' + esc(e.note) : ''}`
     : e.type === 'newtask' ? `📝 Báo bài mới – <b>${esc(e.subject)}</b> ${esc(e.content)}${e.due ? ' · hạn ' + fmt(e.due) : ''}`
     : e.type === 'read' ? `📖 Đã đọc kiến thức – ${esc(e.text || '')}`
+    : e.type === 'check' ? `✔ Tự kiểm tra kết quả <b>${esc(e.subject)}</b> ${esc(e.book || '')} – ${esc(e.title || '')} (lần ${e.attempt}): <b>${e.got}/${e.max}</b> ý đúng${Object.values(e.res || {}).some(v => v.r === 'wrong') ? ' · ' + Object.entries(e.res).filter(([k, v]) => v.r === 'wrong').map(([k]) => k).join(', ') + ' sai' : ''}`
     : e.type === 'quiz' ? quizLineHTML(e)
     : e.type === 'start' ? '▶️ Con bắt đầu học' : e.type === 'finish' ? `🏁 Con báo đã xong buổi học${e.text ? ' – ' + esc(e.text) : ''}`
     : e.type === 'note' ? `💬 Con nhắn ba: <b>${esc(e.text || '')}</b>` : esc(e.type);
@@ -3164,7 +3200,7 @@ function taskBoardHTML(day, checkList){
     const kid = t.kidAt && (t.status || 'todo') !== 'todo' ? `<span class="chip" style="background:${kst[1]};color:${kst[2]}">📱 Con: ${kst[0]} · ${hhmm(t.kidAt)}</span>` : '';
     const del = isV ? '' : S.confirmDel === t.id ? `<button class="btn danger xs" data-act="del" data-id="${esc(t.id)}">Xác nhận xoá</button><button class="btn ghost xs" data-act="cancelDel">Không xoá</button>` : `<button class="btn ghost xs" data-act="askDel" data-id="${esc(t.id)}">🗑 Xoá bài</button>`;
     const ed = `<div class="tedit small">${kid}<label>Giao chiều <input type="date" data-tedit="planDay" data-id="${esc(t.id)}" value="${esc(t.planDay || '')}"></label><label>Hạn nộp <input type="date" data-tedit="due" data-id="${esc(t.id)}" value="${esc(t.due || '')}"></label>${del}${isV ? '<span class="muted">bài tự động – đổi ngày thì app lưu thành bài riêng</span>' : ''}</div>`;
-    const quiz = q ? `<div class="small qline">${quizLineHTML(q)}</div>` : '';
+    const quiz = (q ? `<div class="small qline">${quizLineHTML(q)}</div>` : '') + ktLineHTML(t);
     const keys = hide ? '' : (kb(tg.filter(x => x.tid === t.id)) || missNote(t));
     const dob = !hide && s.snap && s.snap.noQuiz && s.snap.keyId ? doBaiTableHTML(day, s, i) : '';
     return `<div class="tbrow">${taskHTML(t, day)}${ed}${quiz}${keys}${dob}</div>`; };

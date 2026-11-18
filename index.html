@@ -251,6 +251,14 @@ mark.kwm{background:#ffe066;color:inherit;border-radius:4px;padding:0 3px;font-w
 .qsec.withp .qst{grid-column:1/-1;margin:0}
 .passage{position:sticky;top:12px;background:var(--hi-soft);border:2px solid #F0D676;border-radius:var(--r-lg);padding:16px 18px;white-space:pre-wrap;font-size:15px;line-height:1.7;max-height:calc(100vh - 24px);overflow:auto}
 .qlist{display:grid;gap:12px}
+.ktbtn{margin-top:8px;display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.kpart{border-top:1px dashed var(--line);padding:10px 0 4px}.kpart:first-of-type{border-top:0}
+.kq{font-weight:600;margin-bottom:8px;display:flex;gap:8px;flex-wrap:wrap;align-items:center}.kq sup,.kopts sup,.qp sup{font-size:.7em}
+.kopts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.kopts .opt{justify-content:center;text-align:center;font-size:15px}
+.kopts .opt.skip{grid-column:1/-1;font-size:13px;border-style:dashed}
+.kguide{background:var(--grid);border-radius:10px;padding:8px 10px;margin-bottom:8px}
+.chip.kc-ok{background:var(--ok-soft);color:var(--ok)}.chip.kc-no{background:var(--no-soft);color:var(--no)}.chip.kc-wait{background:var(--mid-soft);color:var(--mid)}
+.kpart.k-wrong .kq{color:var(--no)}
 .qcard{background:var(--card);border:2px solid var(--line);border-radius:var(--r-md);padding:14px 16px}
 .qcard.ans{border-color:#B9AEF0}
 .qcard.good{border-color:#9ED9B9;background:linear-gradient(90deg,var(--ok-soft),var(--card) 30%)}
@@ -358,13 +366,13 @@ const S = {
   remote: {},             // file day -> {sha, events}
   queue: ls.get(QUEUE_KEY, []),   // su kien chua gui
   loaded: false, loadErr: '', syncState: 'ok', lastSync: '',
-  ans: {}, quizzes: {}, grades: {}, qOpen: null, qMode: '', qConfirm: false,
+  ans: {}, quizzes: {}, grades: {}, qOpen: null, qMode: '', qConfirm: false, kt: {}, kOpen: null, kConfirm: false, kRedo: false,
   ba: {}, bsha: {}, chatDraft: '', chatSeen: ls.get('goc-hoc-tap-chat-seen', ''),
   quiz: {}, reveal: {}, toast: '', prog: {}, nt: {subject: '', content: '', source: 'V', due: ''}, note: '', setupErr: '', busy: false
 };
 // Ban tam de mo app khi mat mang
-(() => { const c = ls.get(CACHE_KEY, null); if (c){ S.plans = c.plans || {}; S.common = c.common || null; S.remote = c.remote || {}; S.quizzes = c.quizzes || {}; S.grades = c.grades || {}; } })();
-const saveCache = () => { const keep = {}; Object.keys(S.plans).sort().slice(-12).forEach(k => keep[k] = S.plans[k]); ls.set(CACHE_KEY, {plans: keep, common: S.common, remote: S.remote, quizzes: S.quizzes, grades: S.grades}); };
+(() => { const c = ls.get(CACHE_KEY, null); if (c){ S.plans = c.plans || {}; S.common = c.common || null; S.remote = c.remote || {}; S.quizzes = c.quizzes || {}; S.grades = c.grades || {}; S.kt = c.kt || {}; } })();
+const saveCache = () => { const keep = {}; Object.keys(S.plans).sort().slice(-12).forEach(k => keep[k] = S.plans[k]); ls.set(CACHE_KEY, {plans: keep, common: S.common, remote: S.remote, quizzes: S.quizzes, grades: S.grades, kt: S.kt}); };
 
 /* ============ GITHUB ============ */
 const b64 = s => { const b = new TextEncoder().encode(s); let o = ''; for (let i = 0; i < b.length; i += 0x8000) o += String.fromCharCode.apply(null, b.subarray(i, i + 0x8000)); return btoa(o); };
@@ -385,7 +393,8 @@ async function listDir(dir){ return (await api(dir, {allow404: true})) || []; }
 /* ============ NAP DU LIEU ============ */
 async function loadAll(){
   const T = today(), days = [T, addDays(T, 1)];
-  const [kh, cg, common, bo, cb] = await Promise.all([listDir('ke-hoach'), listDir('con-ghi'), getJSON('chung/chung.json'), listDir('bai-on'), listDir('cham-bai')]);
+  const [kh, cg, common, bo, cb, kt] = await Promise.all([listDir('ke-hoach'), listDir('con-ghi'), getJSON('chung/chung.json'), listDir('bai-on'), listDir('cham-bai'), listDir('kiem-tra')]);
+  await Promise.all(kt.filter(f => /\.json$/.test(f.name)).map(async f => { const id = f.name.replace(/\.json$/, ''); if (S.kt[id] && S.kt[id]._sha === f.sha) return; const g = await getJSON('kiem-tra/' + f.name); if (g.obj){ g.obj._sha = g.sha; S.kt[id] = g.obj; } }));
   await loadBa();
   await Promise.all(bo.filter(f => /\.json$/.test(f.name)).map(async f => { const id = f.name.replace(/\.json$/, ''); if (S.quizzes[id] && S.quizzes[id]._sha === f.sha) return; const g = await getJSON('bai-on/' + f.name); if (g.obj){ g.obj._sha = g.sha; S.quizzes[id] = g.obj; } }));
   await Promise.all(cb.filter(f => /\.json$/.test(f.name)).map(async f => { const id = f.name.replace(/\.json$/, ''); if (S.grades[id] && S.grades[id]._sha === f.sha) return; const g = await getJSON('cham-bai/' + f.name); if (g.obj){ g.obj._sha = g.sha; S.grades[id] = g.obj; } }));
@@ -640,6 +649,129 @@ function submitQuiz(force){
 }
 
 
+/* ============ KIEM TRA KET QUA (ba 18/11) ============
+   kiem-tra/<keyId>.json: moi y bai tap Toan = 1 cau chon dap an (dap an + nhan loi che trong "sec").
+   Con lam bai vao vo -> chon ket qua tung y -> Nop (luot 1) -> biet y dung / sai (KHONG hien dap an dung)
+   -> y sai lam lai 1 lan (luot 2). "Em chua lam duoc" / tu danh gia = cho ba. Dap an chi hien khi ba bam "Cho con xem"
+   (cham-bai/<id luot 1>.json co reveal: true). Su kien gui ba: type 'check'. */
+const SLUGK = {'Toán': 'toan'};
+const mathH = s => esc(s).replace(/\^\{([^}]*)\}|\^(\(?−?\d+\)?|[a-z])/g, (m, a, b) => '<sup>' + (a || b) + '</sup>');
+function ktOf(t){
+  const s = t && t.snap; if (!s) return null;
+  const ids = [s.keyId, SLUGK[s.subject] && /^(SGK|SBT)$/.test(s.book || '') && s.lessonNo ? `${SLUGK[s.subject]}-${s.book.toLowerCase()}-${s.lessonNo}` : ''].filter(Boolean);
+  for (const id of ids) if (S.kt[id]) return S.kt[id];
+  return null;
+}
+// Chi kiem tra dung cac cau da giao trong bai: "cau 3.19, 3.21" / "3.9–3.12" / "lam lai cau sai 3.21a". Khong ghi cau nao -> ca bai.
+function ktScope(t, kt){
+  const txt = String((t.snap && t.snap.content) || t.text || ''), i = txt.search(/câu|bài tập/i), tail = i >= 0 ? txt.slice(i) : '';
+  const want = new Set();
+  tail.replace(/(\d+\.\d+)([a-h])?(?:\s*[–-]\s*(\d+\.\d+))?/g, (m, a, sub, b) => {
+    if (b && !sub){ const [p, x] = a.split('.').map(Number), y = +b.split('.')[1]; for (let k = x; k <= y; k++) want.add(p + '.' + k); }
+    else want.add(a + (sub || '')); return m; });
+  const items = kt.items.map(it => {
+    if (!want.size || want.has(it.ex)) return it;
+    const ps = it.parts.filter(p => want.has(p.id)); return ps.length ? {...it, parts: ps} : null; }).filter(Boolean);
+  return items.length ? items : kt.items;
+}
+const ktParts = items => items.flatMap(it => it.parts);
+const ktRuns = t => allEvents().filter(e => e.type === 'check' && e.taskId === t.id);
+const ktKey = t => 'goc-kt-' + t.id;
+function ktDraft(t){ if (!S.ans[ktKey(t)]) S.ans[ktKey(t)] = ls.get(ktKey(t), null) || {a: {}, order: {}, start: Date.now()}; return S.ans[ktKey(t)]; }
+const ktSave = t => ls.set(ktKey(t), S.ans[ktKey(t)]);
+function ktOrder(D, p){ if (!D.order[p.id]){ const o = p.opts.map((_, i) => i); for (let i = o.length - 1; i > 0; i--){ const j = Math.floor(Math.random() * (i + 1)); [o[i], o[j]] = [o[j], o[i]]; } D.order[p.id] = o; } return D.order[p.id]; }
+// Ket qua tong hop cac luot: {pid: {r1, r2, fin}} r = 'ok' | 'wrong' | 'skip' | 'self'
+function ktState(t){
+  const runs = ktRuns(t), r1 = runs.find(e => e.attempt === 1), r2 = r1 && runs.find(e => e.attempt === 2 && e.run === r1.id);
+  const st = {}; if (r1) Object.entries(r1.res || {}).forEach(([k, v]) => st[k] = {r1: v, fin: v});
+  if (r2) Object.entries(r2.res || {}).forEach(([k, v]) => { st[k] = {...(st[k] || {}), r2: v, fin: v}; });
+  return {r1, r2, st, wrong1: r1 ? Object.keys(r1.res || {}).filter(k => r1.res[k].r === 'wrong') : []};
+}
+const ktReveal = r1 => !!(r1 && S.grades[r1.id] && S.grades[r1.id].reveal);
+function ktBtnHTML(t, day){
+  const kt = ktOf(t); if (!kt) return '';
+  const parts = ktParts(ktScope(t, kt)), K = ktState(t);
+  if (!K.r1){ const D = S.ans[ktKey(t)] || ls.get(ktKey(t), null), n = D ? Object.keys(D.a).filter(k => parts.some(p => p.id === k)).length : 0;
+    return `<div class="ktbtn"><button class="btn ${n ? 'line' : 'hi'}" data-act="ktOpen" data-id="${esc(t.id)}" data-day="${day}">✔ Kiểm tra kết quả</button><span class="small muted">${n ? `đã chọn ${n}/${parts.length} ý · chưa nộp` : `${parts.length} ý · làm vào vở xong thì chọn kết quả`}</span></div>`; }
+  const fin = Object.values(K.st).map(x => x.fin.r), ok = fin.filter(r => r === 'ok').length, bad = fin.filter(r => r === 'wrong').length, wait = fin.filter(r => r === 'skip' || r === 'self').length;
+  const redo = !K.r2 && K.wrong1.length;
+  return `<div class="ktbtn"><button class="btn line" data-act="ktOpen" data-id="${esc(t.id)}" data-day="${day}">${redo ? '🔁 Làm lại ' + K.wrong1.length + ' ý sai' : '📊 Xem kết quả kiểm tra'}</button>
+    <span class="small"><b style="color:var(--ok)">${ok} đúng</b>${bad ? ` · <b style="color:var(--no)">${bad} sai</b>` : ''}${wait ? ` · <b style="color:var(--mid)">${wait} chờ ba</b>` : ''}${ktReveal(K.r1) ? ' · ba đã mở đáp án' : ''}</span></div>`;
+}
+function ktTask(){ const o = S.kOpen; if (!o) return null; return planTasks(S.plans[o.day]).find(x => x.id === o.id) || null; }
+function viewCheck(){
+  const t = ktTask(), kt = t && ktOf(t);
+  if (!kt) return `<div class="panel" style="margin-top:20px"><p>Không tìm thấy bài kiểm tra.</p><button class="btn" data-tab="home">Về Hôm nay</button></div>`;
+  const items = ktScope(t, kt), parts = ktParts(items), K = ktState(t), D = ktDraft(t), rev = ktReveal(K.r1);
+  let sec = null; if (rev){ try{ sec = unhide(kt.sec); }catch(e){} }
+  // che do: 'do1' (luot 1) | 'do2' (lam lai y sai) | 'res'
+  const mode = !K.r1 ? 'do1' : (!K.r2 && K.wrong1.length && S.kRedo) ? 'do2' : 'res';
+  const editable = p => mode === 'do1' || (mode === 'do2' && K.wrong1.includes(p.id));
+  const pick = p => D.a[p.id];
+  const nDone = parts.filter(p => (mode === 'do1' || editable(p)) && pick(p) !== undefined).length, nNeed = mode === 'do1' ? parts.length : K.wrong1.length;
+  const chip = v => !v ? '' : v.r === 'ok' ? '<span class="chip kc-ok">✓ Đúng</span>' : v.r === 'wrong' ? '<span class="chip kc-no">✗ Sai</span>' : '<span class="chip kc-wait">⏳ Chờ ba</span>';
+  const SELF = {ok: 'Em làm được', unsure: 'Chưa chắc', no: 'Em chưa làm được'};
+  const partHTML = p => {
+    const s = K.st[p.id], ed = editable(p), v = pick(p);
+    const status = mode === 'res' || (mode === 'do2' && !ed) ? `${chip(s && s.r1)}${s && s.r2 ? ' → lần 2 ' + chip(s.r2) : ''}` : (mode === 'do2' && ed ? '<span class="chip kc-no">Lần 1 sai – chọn lại</span>' : '');
+    let body = '';
+    if (p.type === 'self'){
+      body = `<div class="small kguide">💡 ${esc(p.guide)}</div>` + (ed ? `<div class="kopts">${Object.entries(SELF).map(([k, n]) => `<button class="opt sm" aria-pressed="${v === k}" data-act="ktPick" data-p="${esc(p.id)}" data-v="${k}">${n}</button>`).join('')}</div>`
+        : s ? `<div class="small">Con chọn: <b>${esc(SELF[s.fin.v] || s.fin.v || '')}</b> – ba xem vở rồi nhận xét.</div>` : '');
+    } else if (ed){
+      const o = ktOrder(D, p);
+      body = `<div class="kopts">${o.map(i => `<button class="opt" aria-pressed="${v === i}" data-act="ktPick" data-p="${esc(p.id)}" data-v="${i}"><span>${mathH(p.opts[i])}</span></button>`).join('')}<button class="opt skip" aria-pressed="${v === 'skip'}" data-act="ktPick" data-p="${esc(p.id)}" data-v="skip"><span>🙋 Em chưa làm được</span></button></div>`;
+    } else if (s){
+      const show = x => x.r === 'skip' ? 'Em chưa làm được' : (x.v || '');
+      body = `<div class="small">Con chọn: <b>${mathH(show(s.r1 || s.fin))}</b>${s.r2 ? ` · lần 2: <b>${mathH(show(s.r2))}</b>` : ''}</div>`;
+    }
+    const ans = sec && p.type === 'mcq' && sec.ans[p.id] !== undefined ? `<div class="model"><b>Đáp án ba cho xem:</b> ${mathH(p.opts[sec.ans[p.id]])}</div>` : '';
+    return `<div class="kpart ${s && mode !== 'do1' ? 'k-' + s.fin.r : ''}"><div class="kq"><b>${esc(p.label)}</b> ${mathH(p.q)} ${status}</div>${body}${ans}</div>`;
+  };
+  const cards = items.map(it => `<div class="qcard"><div class="qlab"><b>Câu ${esc(it.ex)}</b></div><div class="qp">${mathH(it.prompt)}</div>${it.parts.map(partHTML).join('')}</div>`).join('');
+  let sum = '';
+  if (mode !== 'do1'){ const fin = Object.values(K.st).map(x => x.fin.r), ok = fin.filter(r => r === 'ok').length, bad = fin.filter(r => r === 'wrong').length, wait = fin.length - ok - bad;
+    sum = `<div class="panel"><h2 style="margin:0">${bad ? '💪' : wait ? '👍' : '🌟'} ${ok}/${fin.length} ý đúng</h2>
+      <p class="small" style="margin:6px 0 0">${bad ? `<b style="color:var(--no)">${bad} ý sai</b> · ` : ''}${wait ? `<b style="color:var(--mid)">${wait} ý chờ ba hỗ trợ</b> · ` : ''}Lần 1 nộp ${hm(K.r1.at)}${K.r2 ? ' · lần 2 nộp ' + hm(K.r2.at) : ''}</p>
+      ${!K.r2 && K.wrong1.length && mode === 'res' ? `<p class="small" style="margin:8px 0 0">Con xem lại vở các ý sai, tìm chỗ nhầm rồi chọn lại <b>1 lần</b>. Máy không cho xem đáp án.</p><div class="actions"><button class="btn" data-act="ktRedo">🔁 Làm lại ${K.wrong1.length} ý sai</button></div>` : ''}
+      ${K.r2 || !K.wrong1.length ? `<p class="small" style="margin:8px 0 0">${rev ? '👀 Ba đã mở đáp án – con đối chiếu từng ý bên dưới.' : bad || wait ? 'Các ý sai / chờ ba: tối ba xem vở cùng con. Đáp án chỉ hiện khi ba mở.' : 'Đúng hết rồi! 🎉'}</p>` : ''}</div>`; }
+  const head = `<div class="panel quizhead" style="margin-top:20px;${sjStyle(kt.subject)}">
+      <button class="btn line" data-tab="home" style="float:right">← Về Hôm nay</button>
+      <div class="small" style="font-weight:700">${ic(kt.subject)} ${esc(kt.subject)} ${esc(kt.book)} · ✔ Kiểm tra kết quả</div>
+      <h2>${esc(kt.title)}</h2>
+      <p class="small" style="margin:6px 0 0">${mode === 'do1' ? 'Con làm bài vào vở trước, xong ý nào thì chọn kết quả ý đó. Không giới hạn thời gian. Chọn xong hết bấm <b>Nộp bài</b> để biết ý nào đúng, ý nào sai.' : mode === 'do2' ? 'Lần 2: chỉ chọn lại các ý sai. Sau lần này máy không cho làm lại nữa.' : ''}</p>
+      ${mode !== 'res' ? `<div class="bar" style="margin-top:10px;background:rgba(255,255,255,.7)"><i style="width:${pct(nDone, nNeed)}%"></i></div><div class="small" style="margin-top:4px">Đã chọn ${nDone}/${nNeed} ý</div>` : ''}
+    </div>`;
+  const bar = mode === 'res' ? '' : `<div class="panel submitbar">${S.kConfirm ? `<p class="err" style="margin-top:0">Còn ${nNeed - nDone} ý chưa chọn – các ý đó sẽ tính là "chưa làm được". Con nộp luôn?</p><div class="actions"><button class="btn line" data-act="ktBack">Làm tiếp</button><button class="btn" data-act="ktSubmit" data-force="1">📤 Vẫn nộp</button></div>`
+    : `<div class="actions" style="margin-top:0;align-items:center"><button class="btn" data-act="ktSubmit">📤 ${mode === 'do2' ? 'Nộp lần 2' : 'Nộp bài'}</button><span class="small muted">Bài được lưu tạm trên máy, tắt máy vẫn còn.</span></div>`}</div>`;
+  return head + (mode === 'res' ? sum : '') + cards + bar + (mode === 'res' ? '' : '');
+}
+function ktSubmit(force){
+  const t = ktTask(), kt = t && ktOf(t); if (!kt) return;
+  const items = ktScope(t, kt), parts = ktParts(items), K = ktState(t), D = ktDraft(t);
+  const attempt = K.r1 ? 2 : 1, todo = attempt === 1 ? parts : parts.filter(p => K.wrong1.includes(p.id));
+  const left = todo.filter(p => D.a[p.id] === undefined).length;
+  if (left && !force){ S.kConfirm = true; render(); return; }
+  S.kConfirm = false;
+  const sec = unhide(kt.sec), res = {};
+  todo.forEach(p => { const v = D.a[p.id];
+    if (p.type === 'self'){ res[p.id] = {r: 'self', v: v || 'no'}; return; }
+    if (v === undefined || v === 'skip'){ res[p.id] = {r: 'skip'}; return; }
+    const ok = +v === sec.ans[p.id];
+    res[p.id] = ok ? {r: 'ok', v: p.opts[v]} : {r: 'wrong', v: p.opts[v], err: (sec.err[p.id] || {})[v] || '', right: p.opts[sec.ans[p.id]]}; });
+  const vals = Object.values(res), got = vals.filter(x => x.r === 'ok').length;
+  const evId = rid(); addEvent({id: evId, type: 'check', keyId: kt.id, taskId: t.id, planDay: S.kOpen.day, subject: kt.subject, book: kt.book, lesson: kt.lesson, title: kt.title, text: t.text,
+    attempt, run: attempt === 2 ? K.r1.id : evId, scope: parts.map(p => p.id), res, got, max: vals.filter(x => x.r !== 'self').length,
+    min: Math.max(1, Math.round((Date.now() - (D.start || Date.now())) / 60000))});
+  // tat ca dung -> tu danh dau "xong du"
+  const all = attempt === 1 ? vals : Object.values({...K.r1.res, ...res});
+  if (all.every(x => x.r === 'ok') && markOf(t, allEvents()).mark !== 'ok') addEvent({type: 'mark', taskId: t.id, mark: 'ok', planDay: S.kOpen.day, subject: t.subject, text: t.text, snap: t.snap, auto: 'quiz'});
+  if (attempt === 2 || all.every(x => x.r === 'ok')){ delete S.ans[ktKey(t)]; try{ localStorage.removeItem(ktKey(t)); }catch(e){} }
+  S.kRedo = false; render(); window.scrollTo(0, 0);
+  if (all.every(x => x.r === 'ok')) celebrate();
+}
+
+
 /* ============ NHAN BA (ba 30/10): tin cua con = su kien 'note'; tin cua ba doc tu ba-ghi/YYYY-MM-DD.json ============ */
 async function loadBa(){
   const from = addDays(today(), -30); let changed = false;
@@ -681,12 +813,12 @@ function renderNow(){
   const app = document.getElementById('app');
   if (!S.cfg.token){ app.innerHTML = viewSetup(); return; }
   const evs = allEvents(), name = S.cfg.name || 'Hạ An';
-  const views = {home: viewHome, know: viewKnow, add: viewAdd, tkb: viewTkb, award: viewAward, log: viewLog, quiz: viewQuiz};
+  const views = {home: viewHome, know: viewKnow, add: viewAdd, tkb: viewTkb, award: viewAward, log: viewLog, quiz: viewQuiz, check: viewCheck};
   const syncTxt = S.queue.length ? (S.syncState === 'err' ? `<span class="dot err"></span>Chưa gửi được ${S.queue.length} thao tác – app sẽ tự gửi lại` : '<span class="dot wait"></span>Đang gửi cho ba…') : `<span class="dot"></span>Đã đồng bộ ${S.lastSync || ''}`;
   app.innerHTML = `<div class="shell">
     <aside class="side">
       <div class="brand">${OWL(44)}<b>Góc học tập<br>6A14</b></div>
-      <nav class="nav" aria-label="Mục">${NAV.map(([k, i, n]) => `<button data-tab="${k}" aria-current="${S.tab === k || (S.tab === 'quiz' && k === 'home') ? 'page' : 'false'}"><span class="ic">${i}</span>${n}</button>`).join('')}</nav>
+      <nav class="nav" aria-label="Mục">${NAV.map(([k, i, n]) => `<button data-tab="${k}" aria-current="${S.tab === k || ((S.tab === 'quiz' || S.tab === 'check') && k === 'home') ? 'page' : 'false'}"><span class="ic">${i}</span>${n}</button>`).join('')}</nav>
       <div class="owlbox">Tự làm trước, đánh dấu chỗ khó, rồi mới hỏi ba nhé!</div>
     </aside>
     <main class="main">
@@ -790,7 +922,7 @@ function taskHTML(t, g, evs, day){
   const who = m.mark ? (m.by === 'ba' ? 'Ba đã xem và đổi dấu' : m.at ? (autoM && autoM.auto === 'quiz' && autoM.at === m.at ? 'Máy chấm và đánh dấu lúc ' : 'Con đánh dấu lúc ') + hm(m.at) + (m.pending ? ' · chờ gửi' : '') : '') : '';
   return `<div class="task ${m.mark ? 'm-' + m.mark : ''}">
     <div class="txt"><span class="src">${esc(t.src)}</span><span class="body">${esc(t.text)}</span>${t.tag ? `<span class="debt">${esc(t.tag)}</span>` : ''}${t.fromKid ? ' <span class="src">con nhập</span>' : ''}${todo(t) ? `<div class="when" style="color:var(--ink)">📌 ${esc(todo(t))}</div>` : ''}
-      ${who ? `<div class="when">${esc(who)}</div>` : ''}${quizBtnHTML(t, day)}</div>
+      ${who ? `<div class="when">${esc(who)}</div>` : ''}${quizBtnHTML(t, day)}${ktBtnHTML(t, day)}</div>
     <div class="stamps" role="group" aria-label="Đánh dấu">${Object.entries(MARKS).map(([k, v]) => `<button class="stamp ${v.c}" title="${v.n}" aria-label="${v.n}" aria-pressed="${m.mark === k}" data-act="mark" data-id="${esc(t.id)}" data-day="${day}" data-v="${k}">${MARK_SVG[k]}</button>`).join('')}</div>
   </div>`;
 }
@@ -893,6 +1025,7 @@ function viewLog(evs){
     : e.type === 'progress' ? (e.mode && e.mode !== 'new' ? `${MODE_N[e.mode] || e.mode} – <b>${esc(e.subject)}</b>${e.part ? ' · ' + esc(e.part) : ''}` : `📘 Bài đã học – <b>${esc(e.subject)}</b> bài ${esc(e.lesson)}${e.pages ? ' tr.' + esc(e.pages) : ''}`)
     : e.type === 'newtask' ? `📝 Bài mới – <b>${esc(e.subject)}</b> ${esc(e.content)}`
     : e.type === 'read' ? `📖 Đọc xong kiến thức – ${esc(e.text || '')}`
+    : e.type === 'check' ? `✔ Kiểm tra kết quả <b>${esc(e.subject)}</b> ${esc(e.book || '')} – ${esc(e.title || '')}: ${e.got}/${e.max} ý đúng (lần ${e.attempt})`
     : e.type === 'quiz' ? `📤 Nộp bài ôn <b>${esc(e.subject)}</b>: ${e.got}/${e.max} ý đúng${e.textN ? ' · ' + e.textN + ' câu tự luận' : ''} (lần ${e.attempt})`
     : e.type === 'start' ? '▶️ Bắt đầu học' : e.type === 'finish' ? '🏁 Báo ba: con xong buổi chiều' : e.type === 'note' ? `💬 Nhắn ba: ${esc(e.text)}` : esc(e.type);
   return `<div class="panel" style="margin-top:20px"><div class="ph"><h2>Nhật ký thao tác</h2><span class="small muted">Ba xem được các dòng này kèm giờ</span></div>
@@ -933,6 +1066,11 @@ app.addEventListener('click', async e => {
     case 'pick': { const D = quizDraft(S.qOpen.id); D.a[d.q] = d.v; saveDraft(S.qOpen.id); render(); break; }
     case 'tf': case 'cls': { const D = quizDraft(S.qOpen.id); D.a[d.q] = {...(D.a[d.q] || {}), [d.i]: d.v}; saveDraft(S.qOpen.id); render(); break; }
     case 'qSubmit': submitQuiz(!!d.force); break;
+    case 'ktOpen': S.kOpen = {id: d.id, day: d.day}; S.kConfirm = false; S.kRedo = false; S.tab = 'check'; render(); window.scrollTo(0, 0); break;
+    case 'ktPick': { const t = ktTask(); if (!t) return; const D = ktDraft(t); const v = /^\d+$/.test(d.v) ? +d.v : d.v; if (D.a[d.p] === v) delete D.a[d.p]; else D.a[d.p] = v; ktSave(t); S.kConfirm = false; render(); break; }
+    case 'ktSubmit': ktSubmit(!!d.force); break;
+    case 'ktBack': S.kConfirm = false; render(); break;
+    case 'ktRedo': { const t = ktTask(); if (!t) return; const K = ktState(t), D = ktDraft(t); K.wrong1.forEach(id => delete D.a[id]); D.start = Date.now(); ktSave(t); S.kRedo = true; render(); window.scrollTo(0, 0); break; }
     case 'qBack': S.qConfirm = false; render(); break;
     case 'qRetry': { const at = quizAttempts(S.qOpen.id), last = at[at.length - 1]; const qz = S.quizzes[S.qOpen.id];
       const a = {...(last.answers || {})}; (last.wrong || []).forEach(id => delete a[id]);
