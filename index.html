@@ -255,6 +255,7 @@ mark.kwm{background:#ffe066;color:inherit;border-radius:4px;padding:0 3px;font-w
 .kpart{border-top:1px dashed var(--line);padding:10px 0 4px}.kpart:first-of-type{border-top:0}
 .kq{font-weight:600;margin-bottom:8px;display:flex;gap:8px;flex-wrap:wrap;align-items:center}.kq sup,.kopts sup,.qp sup{font-size:.7em}
 .kopts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.kopts .opt{justify-content:center;text-align:center;font-size:15px}
+.kopts.one{grid-template-columns:1fr}.kopts.one .opt{justify-content:flex-start;text-align:left;font-size:14px}
 .kopts .opt.skip{grid-column:1/-1;font-size:13px;border-style:dashed}
 .kguide{background:var(--grid);border-radius:10px;padding:8px 10px;margin-bottom:8px}
 .chip.kc-ok{background:var(--ok-soft);color:var(--ok)}.chip.kc-no{background:var(--no-soft);color:var(--no)}.chip.kc-wait{background:var(--mid-soft);color:var(--mid)}
@@ -654,7 +655,7 @@ function submitQuiz(force){
    Con lam bai vao vo -> chon ket qua tung y -> Nop (luot 1) -> biet y dung / sai (KHONG hien dap an dung)
    -> y sai lam lai 1 lan (luot 2). "Em chua lam duoc" / tu danh gia = cho ba. Dap an chi hien khi ba bam "Cho con xem"
    (cham-bai/<id luot 1>.json co reveal: true). Su kien gui ba: type 'check'. */
-const SLUGK = {'Toán': 'toan'};
+const SLUGK = {'Toán': 'toan', 'KHTN': 'khtn', 'Tiếng Anh': 'anh', 'Tin học': 'tin'};
 const mathH = s => esc(s).replace(/\^\{([^}]*)\}|\^(\(?−?\d+\)?|[a-z])/g, (m, a, b) => '<sup>' + (a || b) + '</sup>');
 function ktOf(t){
   const s = t && t.snap; if (!s) return null;
@@ -720,7 +721,7 @@ function viewCheck(){
         : s ? `<div class="small">Con chọn: <b>${esc(SELF[s.fin.v] || s.fin.v || '')}</b> – ba xem vở rồi nhận xét.</div>` : '');
     } else if (ed){
       const o = ktOrder(D, p);
-      body = `<div class="kopts">${o.map(i => `<button class="opt" aria-pressed="${v === i}" data-act="ktPick" data-p="${esc(p.id)}" data-v="${i}"><span>${mathH(p.opts[i])}</span></button>`).join('')}<button class="opt skip" aria-pressed="${v === 'skip'}" data-act="ktPick" data-p="${esc(p.id)}" data-v="skip"><span>🙋 Em chưa làm được</span></button></div>`;
+      body = `<div class="kopts${p.opts.some(x => x.length > 26) ? ' one' : ''}">${o.map(i => `<button class="opt" aria-pressed="${v === i}" data-act="ktPick" data-p="${esc(p.id)}" data-v="${i}"><span>${mathH(p.opts[i])}</span></button>`).join('')}<button class="opt skip" aria-pressed="${v === 'skip'}" data-act="ktPick" data-p="${esc(p.id)}" data-v="skip"><span>🙋 Em chưa làm được</span></button></div>`;
     } else if (s){
       const show = x => x.r === 'skip' ? 'Em chưa làm được' : (x.v || '');
       body = `<div class="small">Con chọn: <b>${mathH(show(s.r1 || s.fin))}</b>${s.r2 ? ` · lần 2: <b>${mathH(show(s.r2))}</b>` : ''}</div>`;
