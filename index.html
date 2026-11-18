@@ -679,7 +679,7 @@ const ktRuns = t => allEvents().filter(e => e.type === 'check' && e.taskId === t
 const ktKey = t => 'goc-kt-' + t.id;
 function ktDraft(t){ if (!S.ans[ktKey(t)]) S.ans[ktKey(t)] = ls.get(ktKey(t), null) || {a: {}, order: {}, start: Date.now()}; return S.ans[ktKey(t)]; }
 const ktSave = t => ls.set(ktKey(t), S.ans[ktKey(t)]);
-function ktOrder(D, p){ if (!D.order[p.id]){ const o = p.opts.map((_, i) => i); for (let i = o.length - 1; i > 0; i--){ const j = Math.floor(Math.random() * (i + 1)); [o[i], o[j]] = [o[j], o[i]]; } D.order[p.id] = o; } return D.order[p.id]; }
+function ktOrder(D, p){ if (p.fixed) return p.opts.map((_, i) => i); if (!D.order[p.id]){ const o = p.opts.map((_, i) => i); for (let i = o.length - 1; i > 0; i--){ const j = Math.floor(Math.random() * (i + 1)); [o[i], o[j]] = [o[j], o[i]]; } D.order[p.id] = o; } return D.order[p.id]; }
 // Ket qua tong hop cac luot: {pid: {r1, r2, fin}} r = 'ok' | 'wrong' | 'skip' | 'self'
 function ktState(t){
   const runs = ktRuns(t), r1 = runs.find(e => e.attempt === 1), r2 = r1 && runs.find(e => e.attempt === 2 && e.run === r1.id);
@@ -728,7 +728,7 @@ function viewCheck(){
     const ans = sec && p.type === 'mcq' && sec.ans[p.id] !== undefined ? `<div class="model"><b>Đáp án ba cho xem:</b> ${mathH(p.opts[sec.ans[p.id]])}</div>` : '';
     return `<div class="kpart ${s && mode !== 'do1' ? 'k-' + s.fin.r : ''}"><div class="kq"><b>${esc(p.label)}</b> ${mathH(p.q)} ${status}</div>${body}${ans}</div>`;
   };
-  const cards = items.map(it => `<div class="qcard"><div class="qlab"><b>Câu ${esc(it.ex)}</b></div><div class="qp">${mathH(it.prompt)}</div>${it.parts.map(partHTML).join('')}</div>`).join('');
+  const cards = items.map(it => `<div class="qcard"><div class="qlab"><b>${/^câu/i.test(it.ex) ? '' : 'Câu '}${esc(it.ex)}</b></div><div class="qp">${mathH(it.prompt)}</div>${it.parts.map(partHTML).join('')}</div>`).join('');
   let sum = '';
   if (mode !== 'do1'){ const fin = Object.values(K.st).map(x => x.fin.r), ok = fin.filter(r => r === 'ok').length, bad = fin.filter(r => r === 'wrong').length, wait = fin.length - ok - bad;
     sum = `<div class="panel"><h2 style="margin:0">${bad ? '💪' : wait ? '👍' : '🌟'} ${ok}/${fin.length} ý đúng</h2>
