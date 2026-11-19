@@ -655,7 +655,7 @@ function submitQuiz(force){
    Con lam bai vao vo -> chon ket qua tung y -> Nop (luot 1) -> biet y dung / sai (KHONG hien dap an dung)
    -> y sai lam lai 1 lan (luot 2). "Em chua lam duoc" / tu danh gia = cho ba. Dap an chi hien khi ba bam "Cho con xem"
    (cham-bai/<id luot 1>.json co reveal: true). Su kien gui ba: type 'check'. */
-const SLUGK = {'Toán': 'toan', 'KHTN': 'khtn', 'Tiếng Anh': 'anh', 'Tin học': 'tin'};
+const SLUGK = {'Toán': 'toan', 'KHTN': 'khtn', 'Tiếng Anh': 'anh', 'Tin học': 'tin', 'Văn': 'van'};
 const mathH = s => esc(s).replace(/\^\{([^}]*)\}|\^(\(?−?\d+\)?|[a-z])/g, (m, a, b) => '<sup>' + (a || b) + '</sup>');
 function ktOf(t){
   const s = t && t.snap; if (!s) return null;
@@ -670,7 +670,8 @@ function ktScope(t, kt){
   tail.replace(/(\d+\.\d+)([a-h])?(?:\s*[–-]\s*(\d+\.\d+))?/g, (m, a, sub, b) => {
     if (b && !sub){ const [p, x] = a.split('.').map(Number), y = +b.split('.')[1]; for (let k = x; k <= y; k++) want.add(p + '.' + k); }
     else want.add(a + (sub || '')); return m; });
-  tail.replace(/\b([A-G]\d)\b/g, (m, a) => { want.add(a); return m; });   // Tieng Anh SBT: cau A3, C1, …
+  tail.replace(/\b([A-G]\d)\b/g, (m, a) => { want.add(a); return m; });
+  tail.replace(/(BT\s?\d+|Viết \d|Nói \d)/g, (m, a) => { want.add(a.replace(/^BT\s/, 'BT')); return m; });   // Van SBT: BT1, Viết 1   // Tieng Anh SBT: cau A3, C1, …
   if (!want.size && kt.items.some(it => it.page)){   // "on SGK tr.30" -> chi cac phan tu trang 30 tro ve truoc
     const pg = Math.max(0, ...[...txt.matchAll(/tr\.\s*(\d+)(?:\s*[–-]\s*(\d+))?/g)].map(m => +(m[2] || m[1])));
     if (pg){ const its = kt.items.filter(it => !it.page || it.page <= pg); if (its.length) return its; } }
