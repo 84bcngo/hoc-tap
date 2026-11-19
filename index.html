@@ -670,6 +670,10 @@ function ktScope(t, kt){
   tail.replace(/(\d+\.\d+)([a-h])?(?:\s*[–-]\s*(\d+\.\d+))?/g, (m, a, sub, b) => {
     if (b && !sub){ const [p, x] = a.split('.').map(Number), y = +b.split('.')[1]; for (let k = x; k <= y; k++) want.add(p + '.' + k); }
     else want.add(a + (sub || '')); return m; });
+  tail.replace(/\b([A-G]\d)\b/g, (m, a) => { want.add(a); return m; });   // Tieng Anh SBT: cau A3, C1, …
+  if (!want.size && kt.items.some(it => it.page)){   // "on SGK tr.30" -> chi cac phan tu trang 30 tro ve truoc
+    const pg = Math.max(0, ...[...txt.matchAll(/tr\.\s*(\d+)(?:\s*[–-]\s*(\d+))?/g)].map(m => +(m[2] || m[1])));
+    if (pg){ const its = kt.items.filter(it => !it.page || it.page <= pg); if (its.length) return its; } }
   const items = kt.items.map(it => {
     if (!want.size || want.has(it.ex)) return it;
     const ps = it.parts.filter(p => want.has(p.id)); return ps.length ? {...it, parts: ps} : null; }).filter(Boolean);
