@@ -660,6 +660,10 @@ const mathH = s => esc(s).replace(/\^\{([^}]*)\}|\^(\(?−?\d+\)?|[a-z])/g, (m, 
 function ktOf(t){
   const s = t && t.snap; if (!s) return null;
   const ids = [s.keyId, SLUGK[s.subject] && /^(SGK|SBT)$/.test(s.book || '') && s.lessonNo ? `${SLUGK[s.subject]}-${s.book.toLowerCase()}-${s.lessonNo}` : ''].filter(Boolean);
+  if (s.keyId && S.kt[s.keyId]) return S.kt[s.keyId];
+  // Bai tu dong: lessonNo la bai SGK, noi dung la bai SBT tuong ung (vd LTC-III-1 -> "On tap chuong III") -> khop theo tieu de trong noi dung
+  const c = String(s.content || ''), byTitle = Object.values(S.kt).find(k => k.subject === s.subject && k.book === s.book && k.title && c.startsWith(k.title) && /^($|\s*[(:])/.test(c.slice(k.title.length)));
+  if (byTitle) return byTitle;
   for (const id of ids) if (S.kt[id]) return S.kt[id];
   return null;
 }
@@ -671,6 +675,7 @@ function ktScope(t, kt){
     if (b && !sub){ const [p, x] = a.split('.').map(Number), y = +b.split('.')[1]; for (let k = x; k <= y; k++) want.add(p + '.' + k); }
     else want.add(a + (sub || '')); return m; });
   tail.replace(/\b([A-G]\d)\b/g, (m, a) => { want.add(a); return m; });
+  tail.replace(/\bTN\s?(\d+)(?:\s*[–-]\s*TN\s?(\d+))?/g, (m, a, b) => { for (let k = +a; k <= +(b || a); k++) want.add('TN' + k); return m; });   // Toan SBT on tap: TN1–TN6
   tail.replace(/(BT\s?\d+|Viết \d|Nói \d)/g, (m, a) => { want.add(a.replace(/^BT\s/, 'BT')); return m; });   // Van SBT: BT1, Viết 1   // Tieng Anh SBT: cau A3, C1, …
   if (!want.size && kt.items.some(it => it.page)){   // "on SGK tr.30" -> chi cac phan tu trang 30 tro ve truoc
     const pg = Math.max(0, ...[...txt.matchAll(/tr\.\s*(\d+)(?:\s*[–-]\s*(\d+))?/g)].map(m => +(m[2] || m[1])));
