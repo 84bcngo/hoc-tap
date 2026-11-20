@@ -1155,7 +1155,9 @@ function orderedPlan0(day, withDone){
     const ex = exS.has(sj), hot = ts.some(t => isDebtT(t) || g.P1.includes(t)), onlyExtra = ts.every(t => extraSet.has(t));
     const eDue = exT.filter(t => t.subject===sj).map(t => t.due).sort()[0] || '';
     const minDue = ts.map(t => t.due || '9999').sort()[0];
-    return {sj, tasks: ts, exam: ex, hot, key: [ex ? 0 : hot ? 1 : onlyExtra ? 3 : 2, eDue, perIdx(sj), minDue]};
+    // Ba 20/11: mon phai nop ngay mai (can hoc) xep truoc; mon chi co bai no (tra no) xep sau mon can hoc
+    const need = ts.some(t => !extraSet.has(t) && !isDebtT(t) && (g.P1.includes(t) || (t.due && t.due <= tm)));
+    return {sj, tasks: ts, exam: ex, hot: hot || need, key: [ex ? 0 : need ? 1 : hot ? 2 : onlyExtra ? 4 : 3, eDue, perIdx(sj), minDue]};
   }).sort((a,b) => cmp(a.key, b.key));
   return {w, tm, pf, open, exS, exam, debts: order(debts), laterDebts, deferred, notYet, g, extraOld: [], warm, order, ordOf, groups, isDebtT};
 }
