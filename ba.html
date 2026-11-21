@@ -1329,9 +1329,12 @@ function viewToday(){
   const OP = orderedPlan(day, true);
   const checkList = [...OP.groups.flatMap(gr => gr.tasks), ...OP.extraOld];
   const debts = open.filter(t=>t.backlog || isDebt(t,day));
-  const p1Tomorrow = shownAll.filter(t=>t.due===tm);
+  // Ba 21/11: cac danh sach ben duoi xep dung thu tu nhiem vu cua con (nhom mon -> bai trong nhom)
+  const kidIdx = new Map(checkList.map((t, i) => [t.id, i])), sjIdx = new Map(OP.groups.map((g, i) => [g.sj, i]));
+  const byKid = (a, b) => (kidIdx.has(a.id) ? kidIdx.get(a.id) : 1e4 + (sjIdx.has(a.subject) ? sjIdx.get(a.subject) : 99)) - (kidIdx.has(b.id) ? kidIdx.get(b.id) : 1e4 + (sjIdx.has(b.subject) ? sjIdx.get(b.subject) : 99));
+  const p1Tomorrow = shownAll.filter(t=>t.due===tm).sort(byKid);
   const helpItems = open.filter(t=>(t.status==='help' || t.status==='review')).sort((a,b)=>(a.status==='help'?0:1)-(b.status==='help'?0:1) || byPrio(day)(a,b));
-  const coach = (pf.english ? helpItems.filter(t=>t.status==='help' && prioOf(t,day)==='P1') : helpItems).slice(0,3);
+  const coach = (pf.english ? helpItems.filter(t=>t.status==='help' && prioOf(t,day)==='P1') : helpItems).slice(0,3).sort(byKid);
   const deferred = helpItems.length - coach.length;
   const spot = shownAll.filter(t=>t.status==='done' && t.doneAt===day).sort((a,b)=>(HEAVY.has(b.subject)?1:0)-(HEAVY.has(a.subject)?1:0))[0];
   const tmSubs = [...new Set(tkbOf(tm)[dow(tm)].map(p=>p.s).filter(s=>HEAVY.has(s)))];
