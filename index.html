@@ -655,7 +655,7 @@ function submitQuiz(force){
    Con lam bai vao vo -> chon ket qua tung y -> Nop (luot 1) -> biet y dung / sai (KHONG hien dap an dung)
    -> y sai lam lai 1 lan (luot 2). "Em chua lam duoc" / tu danh gia = cho ba. Dap an chi hien khi ba bam "Cho con xem"
    (cham-bai/<id luot 1>.json co reveal: true). Su kien gui ba: type 'check'. */
-const SLUGK = {'Toán': 'toan', 'KHTN': 'khtn', 'Tiếng Anh': 'anh', 'Tin học': 'tin', 'Văn': 'van'};
+const SLUGK = {'Toán': 'toan', 'KHTN': 'khtn', 'Tiếng Anh': 'anh', 'Tin học': 'tin', 'Văn': 'van', 'LS&ĐL': 'lsdl'};
 const mathH = s => esc(s).replace(/\^\{([^}]*)\}|\^(\(?−?\d+\)?|[a-z])/g, (m, a, b) => '<sup>' + (a || b) + '</sup>');
 function ktOf(t){
   const s = t && t.snap; if (!s) return null;
@@ -676,6 +676,9 @@ function ktScope(t, kt){
     else want.add(a + (sub || '')); return m; });
   tail.replace(/\b([A-G]\d)\b/g, (m, a) => { want.add(a); return m; });
   tail.replace(/\bTN\s?(\d+)(?:\s*[–-]\s*TN\s?(\d+))?/g, (m, a, b) => { for (let k = +a; k <= +(b || a); k++) want.add('TN' + k); return m; });   // Toan SBT on tap: TN1–TN6
+  if (kt.subject === 'LS&ĐL'){   // Ba 25/11: LS&DL ghi "câu 1, 2, TL1, TL3" (bo phan "(chưa làm từ … 27/10)")
+    const t2 = tail.split('(')[0].replace(/\bTL\s?(\d+)/g, (m, a) => { want.add('TL' + a); return ' '; });
+    t2.replace(/(^|[^\w.])(\d{1,2})(?![\w.])/g, (m, pre, a) => { want.add(a); return m; }); }
   tail.replace(/(BT\s?\d+|Viết \d|Nói \d)/g, (m, a) => { want.add(a.replace(/^BT\s/, 'BT')); return m; });   // Van SBT: BT1, Viết 1   // Tieng Anh SBT: cau A3, C1, …
   if (!want.size && kt.items.some(it => it.page)){   // "on SGK tr.30" -> chi cac phan tu trang 30 tro ve truoc
     const pg = Math.max(0, ...[...txt.matchAll(/tr\.\s*(\d+)(?:\s*[–-]\s*(\d+))?/g)].map(m => +(m[2] || m[1])));
