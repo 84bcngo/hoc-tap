@@ -1269,7 +1269,7 @@ function childMessage0(day){
       L.push('', `🔑 **[${lab}] ${u(ttl)}**${pg ? ` (${pg})` : ''}${cut ? ` [[gray|– phần đã học đến tr.${mx}]]` : ''}${x && x.from ? ` [[orange|(học từ ${fmt(x.from)}, ${quizState(x.id).checked ? 'còn câu chưa thuộc' : 'chưa kiểm tra'})]]` : ''}`);
       const {wrongQ, memL} = x ? memLines(x, mx) : {wrongQ: [], memL: []};
       wrongQ.forEach(q => L.push(STAR + ' [[red|Học lại (lần trước chưa thuộc):]] ' + u(q.a || q.q)));
-      const lines = k ? keyLines(k, mx, x && x.key === k ? null : memL).map(o => ({x: o.x, star: o.star && !!x})) : memL.map(m => ({x: m, star: true}));
+      const lines = k ? keyLines(k, mx, x && x.key === k ? null : memL).map(o => ({x: o.x, star: o.star})) : memL.map(m => ({x: m, star: true}));   // ba 25/11: luon hien ⭐ theo knowMust (truoc chi hien khi co muc hoc thuoc)
       lines.forEach(o => L.push((o.star ? STAR + ' ' : '– ') + u(o.x)));
       if (SP) SP.knowledge.push({id: sj + '|' + no, subject: sj, mistakes: ((k || {}).mistakes || []).map(x => u(x)), label: lab, title: u(ttl), pages: pg || '', upTo: cut ? mx : 0, relearn: wrongQ.map(q => u(q.a || q.q)), lines: lines.map(o => ({x: u(o.x), star: !!o.star}))});
     });
