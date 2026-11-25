@@ -957,16 +957,21 @@ function viewKnow(evs){
 
 /* ---- NHAP BAI ---- */
 // Ba 11/11: chon bai tu muc luc (tranh go '9' ma app hieu nham Lich su / Dia li, So hoc / Hinh hoc)
+const LESSON_MAX = 5;
 function lessonFieldHTML(sj, v, d){
   const C = ((S.common && S.common.lessons) || {})[sj], cur = v.lesson ?? (d && d.mode !== 'off' ? d.lesson || '' : '');
   if (!C || !C.list.length) return `<label class="f">Bài số<input type="text" data-prog="${esc(sj)}" data-k="lesson" value="${esc(cur)}" placeholder="vd 20 hoặc 19, 20"></label>`;
-  const [c1, c2] = String(cur).split(/\s*,\s*/), lasts = [].concat(C.last || []);
-  const near = lasts.flatMap(no => { const i = C.list.findIndex(x => x.no === no); return i >= 0 ? C.list.slice(i, i + 2) : []; });   // bai vua hoc + bai tiep theo (moi phan)
+  const cs = String(cur).split(/\s*,\s*/).filter(Boolean), lasts = [].concat(C.last || []);
+  const near = [...new Set(lasts.flatMap(no => { const i = C.list.findIndex(x => x.no === no); return i >= 0 ? C.list.slice(i, i + LESSON_MAX) : []; }))];   // bai vua hoc + cac bai tiep theo (moi phan)
   const opt = (x, sel) => `<option value="${esc(x.no)}" ${sel ? 'selected' : ''}>${esc(x.t)}</option>`;
   const sel = (k, val, first) => { let used = false; const pick = x => { if (!used && x.no === val){ used = true; return true; } return false; };
     return `<select data-prog="${esc(sj)}" data-k="${k}"><option value="">${first ? '– chọn bài –' : '(không có)'}</option>${near.length ? `<optgroup label="Gần đây (bài vừa học và bài tiếp theo)">${near.map(x => opt(x, pick(x))).join('')}</optgroup>` : ''}<optgroup label="Tất cả bài">${C.list.map(x => opt(x, pick(x))).join('')}</optgroup></select>`; };
-  const two = (v.lesson2 ?? c2) || S.prog2open === sj;
-  return `<label class="f lessonf">Bài học${sel('lesson', v.lesson ?? c1 ?? '', true)}${two ? `<span class="small muted" style="margin-top:4px">Bài thứ 2 (nếu học 2 bài)</span>${sel('lesson2', v.lesson2 ?? c2 ?? '', false)}` : `<button class="linkbtn small" data-act="lesson2" data-sj="${esc(sj)}">＋ Hôm nay học 2 bài</button>`}</label>`;
+  // Ba 25/11: con hoc duoc toi da LESSON_MAX bai trong 1 tiet/ngay (truoc day chi 2)
+  const key = i => i ? 'lesson' + (i + 1) : 'lesson', valOf = i => v[key(i)] ?? cs[i] ?? '';
+  let n = Math.max(1, (S.progN || {})[sj] || 1, cs.length); for (let i = 1; i < LESSON_MAX; i++) if (v[key(i)] !== undefined) n = Math.max(n, i + 1);
+  n = Math.min(n, LESSON_MAX);
+  const rows = Array.from({length: n}, (_, i) => i ? `<span class="small muted" style="margin-top:4px">Bài thứ ${i + 1}</span>${sel(key(i), valOf(i), false)}` : sel('lesson', valOf(0), true)).join('');
+  return `<label class="f lessonf">Bài học${rows}${n < LESSON_MAX ? `<button class="linkbtn small" data-act="lesson2" data-sj="${esc(sj)}" data-n="${n + 1}">＋ Hôm nay học ${n + 1} bài</button>` : ''}</label>`;
 }
 function viewAdd(evs){
   const T = today(), subs = [...new Set(periodsOf(T).map(x => x.s).filter(s => !SKIP_PROG.has(s)))];
@@ -1102,12 +1107,13 @@ app.addEventListener('click', async e => {
     case 'reveal': S.reveal[d.k] = !S.reveal[d.k]; render(); break;
     case 'read': addEvent({type: 'read', kid: d.k, text: d.t, planDay: d.day}); toast('Giỏi lắm! Giờ làm bài tập nào ✏️'); break;
     case 'pmode': S.prog[d.sj] = {...(S.prog[d.sj] || {}), mode: d.v}; render(); break;
-    case 'lesson2': S.prog2open = d.sj; render(); break;
+    case 'lesson2': S.progN = {...(S.progN || {}), [d.sj]: +d.n || 2}; render(); break;
     case 'saveProg': {
       let n = 0;
       const miss = [];
       Object.entries(S.prog).forEach(([sj, v]) => { const mode = v.mode || 'new';
-        if (v.lesson2 !== undefined || v.lesson !== undefined){ const d0 = [...allEvents()].reverse().find(e => e.type === 'progress' && e.subject === sj && e.day === today()) || {}; const [o1, o2] = String(d0.lesson || '').split(/\s*,\s*/); v.lesson = [v.lesson ?? o1 ?? '', v.lesson2 ?? o2 ?? ''].filter(x => String(x).trim()).join(', '); }
+        const ks = Array.from({length: LESSON_MAX}, (_, i) => i ? 'lesson' + (i + 1) : 'lesson');
+        if (ks.some(k => v[k] !== undefined)){ const d0 = [...allEvents()].reverse().find(e => e.type === 'progress' && e.subject === sj && e.day === today()) || {}; const o = String(d0.lesson || '').split(/\s*,\s*/); v.lesson = [...new Set(ks.map((k, i) => String(v[k] ?? o[i] ?? '').trim()).filter(Boolean))].join(', '); }
         if (mode === 'new' && !String(v.lesson || '').trim()){ if (v.mode || v.pages || v.part) miss.push(sj); return; }
         addEvent({type: 'progress', subject: sj, mode, lesson: mode === 'new' ? String(v.lesson).trim() : '', pages: mode === 'new' ? String(v.pages || '').trim() : '', part: String(v.part || '').trim()}); n++; });
       if (miss.length){ toast('Con ghi số bài cho ' + miss.join(', ') + ' (hoặc chọn tình huống khác)'); if (!n) return; }
